@@ -1,0 +1,9 @@
+ICU Lookin BSMS v0.22 — Mobile Navigation Fix
+
+- Rebuilt barber mobile navigation to fit within the phone viewport.
+- Dashboard / Appts / Avail / More remain accessible without horizontal dragging.
+- More menu closes automatically after a page is selected.
+- Added Exit / Return to App Launcher to every barber app navigation.
+- Applied the same mobile behavior to Tony the Barber workspace inside Owner App.
+- Added viewport overflow guards for barber pages.
+- Desktop barber navigation remains available.
