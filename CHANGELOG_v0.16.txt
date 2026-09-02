@@ -1,0 +1,12 @@
+ICU LOOKIN BSMS v0.16 — REFINEMENT BUILD
+
+- Corrected email suggestions: @g waits, @gm distinguishes Gmail, @go distinguishes Google.
+- Mobile barber nav: Dashboard, Appts, Avail, More.
+- Client profile Book Appointment shortcut.
+- Launcher Returning Client phone entry and New Client flow.
+- Policies hub with customer policies.
+- Fixed sender/message visual spacing.
+- Appointment-specific Client ↔ Barber messages.
+- Shop location and Get Directions.
+- Completed-appointment reviews and barber responses.
+- Ratings stay hidden until every active barber has 10 verified reviews.

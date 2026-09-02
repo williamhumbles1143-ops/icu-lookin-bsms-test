@@ -1,0 +1,45 @@
+ICU LOOKIN BSMS v0.18 — REFINEMENT & OWNER TOOLS FIXES
+
+QR CODE
+- Removed QR placeholder from App Launcher.
+- QR is now limited to Customer Booking and Client Profile.
+- Display size reduced by 50%.
+
+BARBER MANAGEMENT
+- Added safe permanent Delete Barber.
+- Delete is blocked if linked business history exists; Deactivate must be used instead.
+- Tony cannot be deleted.
+
+TONY / BOOTH RENT
+- Removed standalone Tony Barber App file/link.
+- Tony remains Owner and has no booth-rent obligation.
+- Owner booth-rent totals exclude Tony.
+
+OWNER GUIDE
+- Rebuilt Owner Guide content.
+- Search now filters the guide live.
+- Added guidance for core Owner workflows.
+
+OWNER ASSISTANT
+- Expanded from five canned topics to broad Owner-authorized BSMS data queries.
+- Covers appointments, customers, barbers/licenses, revenue, booth rent, deposits, POS, walk-ins, reviews, Owner Diary, incidents, inspections, campaigns/attribution, audit history, and Owner alerts.
+- Does not expose private Barber ↔ Barber messages.
+- Explicitly reports when requested information is not recorded or cannot be confidently mapped.
+
+OPERATIONS
+- Rebuilt Operations entries with separate title/detail/meta blocks to eliminate run-on text.
+- Added supporting spacing CSS.
+
+WORKFORCE
+- Removed Commission column and commission calculations.
+- Removed commission/payroll wording.
+- Tony role corrected to Owner.
+- Tony booth rent displays N/A.
+- Workforce export no longer contains commission data.
+
+GROWTH & MARKETING
+- Rebuilt as a functioning form-based page.
+- Campaign fields accept typing and save real prototype records.
+- Referral/QR source fields accept typing and save records.
+- Delete controls work.
+- Attribution and growth opportunity displays remain active.

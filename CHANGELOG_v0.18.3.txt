@@ -1,0 +1,16 @@
+ICU LOOKIN BSMS v0.18.3 — OWNER WORKSPACE / TONY IDENTITY FIX
+
+FIXED
+- Owner / Shop Management now enters the management workspace on Shop Dashboard
+  rather than jumping directly to Control Center.
+- Owner management navigation remains available across the management dashboard/pages.
+- Tony the Barber now reliably resolves Tony as the active barber.
+- #barber-dashboard, #barber-appointments, etc. are no longer misread as barber names.
+- Tony's heading now renders as "Tony's Dashboard".
+- Tony's appointments, revenue, clients, availability, POS, reviews, etc. resolve against Tony.
+- Owner App subtitle is controlled by workspace:
+    OWNER APP
+    OWNER APP • TONY THE BARBER
+- The Customer Booking App subtitle can no longer remain visible inside Tony's Owner App workspace.
+- Owner/Shop Management and Tony role cards are shown only on the Owner home / Switch Role screen.
+- Returning to Dashboard / Switch Role restores the role-selector home.

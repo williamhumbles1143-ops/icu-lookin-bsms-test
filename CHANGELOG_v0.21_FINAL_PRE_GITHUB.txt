@@ -1,0 +1,28 @@
+ICU LOOKIN BSMS v0.21 — FINAL PRE-GITHUB BUILD
+
+Built from the stable v0.20 recovery baseline. Existing BSMS features were preserved; this build intentionally changes only the two approved customer-facing refinements plus session-safe navigation needed to support them.
+
+1. SHOP POLICIES MODAL
+- Modal header and bottom Back / Exit controls remain fixed within the modal.
+- Policy-button column scrolls independently.
+- Selected-policy content pane stays stationary while the button list scrolls.
+- If policy text exceeds its pane, the policy text pane scrolls independently.
+- Mobile uses separate constrained scrolling areas for policy choices and policy content.
+
+2. RETURNING CLIENT SINGLE SIGN-IN
+- Find My Profile now establishes the customer's current BSMS customer browser session after a known phone match.
+- The Client Profile loads automatically after that one lookup; the customer is not asked to enter the phone number again.
+- My Profile remains recognized during the customer session.
+- Book automatically pre-fills the signed-in customer's first name, last name, phone, and optional email.
+- Loyalty recognizes the signed-in customer without a second lookup.
+- Family booking, reviews, appointment messaging, preferences, and history continue to operate from the signed-in profile.
+- Completing a new booking also establishes or refreshes the customer session.
+- Sign Out and Exit / Return to App Launcher clear the customer session so another person can safely use the same device.
+
+3. CLIENT PROFILE QR
+- Removed Scan to Book QR card from Client Profile only.
+- QR placement remains on the main Customer Booking page.
+
+PRESERVATION
+- Source base: ICU Lookin BSMS Recovery v0.20.
+- Owner/Tony routing, Barber Dashboard, Barber Messages, Clientele persistent list, Client Tools persistent list, booking controls, POS, Social Content, reviews, workforce contractor model, and the rest of the v0.20 feature set are retained.

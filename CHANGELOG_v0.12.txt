@@ -1,0 +1,13 @@
+ICU LOOKIN BSMS v0.12 CHANGELOG
+
+FIXED
+- Availability now uses exact dates.
+- Customer booking respects barber start/end times, breaks, days off, time off, service duration, and existing bookings.
+- Message sender and message body spacing.
+- Family Members spacing and responsive alignment.
+- Kody dreadlock service catalog.
+
+PACKAGING
+- Added .ico files.
+- Added branded portable launch files.
+- Added Windows shortcut creation utility.

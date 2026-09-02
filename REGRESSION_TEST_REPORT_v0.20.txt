@@ -1,0 +1,22 @@
+ICU LOOKIN BSMS v0.20 — REGRESSION TEST REPORT
+
+Automated browser runtime checks (Chromium):
+PASS  Customer Booking: barber dropdown, services, date/time dependency, time dropdown, referral/source dropdown, review, confirmation, saved appointment, form reset.
+PASS  App Launcher: Booking modal, Policies modal, policy selection, existing-phone -> Client Profile, unknown-phone -> Booking.
+PASS  Barber Dashboard: revenue/appointment/progress/schedule sections render.
+PASS  Barber Messages: full conversation list, direct send, private DM architecture, group creation, participants, compose/send.
+PASS  Clientele: persistent alphabetical clickable list and search.
+PASS  Client Tools: persistent alphabetical clickable list, selected-client details, family information.
+PASS  POS: source control renders, services render, Quick Sale completes and saves transaction.
+PASS  Owner routing: Owner Management remains on selected page after a second control interaction.
+PASS  Tony routing: Tony Barber workspace remains on selected page after a second control interaction.
+PASS  Owner management navigation: all 32 Owner pages rendered without JavaScript page errors.
+PASS  Customer navigation: all 4 Customer pages rendered without JavaScript page errors.
+PASS  Individual Barber navigation: all normally testable Barber pages rendered without JavaScript page errors.
+PASS  Tony Barber navigation: all normally testable Barber pages rendered without JavaScript page errors.
+PASS  JavaScript syntax check.
+PASS  Feature-preservation audit: v0.18.3 named functions retained except currentClock/renderTimeClock, which were intentionally removed.
+PASS  No active Time Clock identifiers or old Client Tools dropdown identifier remain.
+
+Social Content note:
+The Social Content page uses IndexedDB. The sandbox browser's in-memory set_content test has an opaque origin, so IndexedDB cannot be runtime-tested in that harness. Its UI elements, IndexedDB functions, media renderer, capture/upload handlers, filtering, image editor, and export logic were retained and statically verified from the feature-complete baseline.

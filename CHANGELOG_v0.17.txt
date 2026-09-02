@@ -1,0 +1,3 @@
+ICU LOOKIN BSMS v0.17 — Owner + Growth Pre-Demo Build
+
+Includes Tony dual-role architecture, Owner Control Center, Barber Management, license tracking, Owner Diary, full conversation memorialization, Incident Reports, Inspections and persistent corrective actions, Checklists, Document Center, Audit History, Backup/Export, System Health, Owner Guide, Shop Cameras placeholder, Growth & Marketing Center, referral/QR source tracking, marketing attribution, business reports, emergency shop status, review cohort/new-hire policy architecture, launcher QR placeholder, and Barber-to-Barber message spacing refinement.

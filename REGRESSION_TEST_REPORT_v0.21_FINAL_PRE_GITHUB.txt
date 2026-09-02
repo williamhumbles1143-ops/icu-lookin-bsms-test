@@ -1,0 +1,57 @@
+ICU LOOKIN BSMS v0.21 — FINAL PRE-GITHUB REGRESSION TEST REPORT
+
+BUILD BASIS
+- Built directly from the stable ICU Lookin BSMS Recovery v0.20 baseline.
+- Only five files differ from v0.20: APP_LAUNCHER.html, index.html, assets/app.js, assets/style.css, plus this build's new changelog/report files.
+- No v0.20 JavaScript function was removed. Six customer-session helper functions were added.
+- All 54 application view sections from v0.20 remain present.
+
+TARGETED CHANGES — PASS
+- Policies: policy-button column has an independent scroll area.
+- Policies: scrolling buttons does not move the modal shell, selected-policy pane, header/footer controls.
+- Policies: bottom policy choices remain clickable after scrolling.
+- Policies: mobile independent-scroll behavior verified at 390 × 844.
+- Returning client: known phone establishes customer browser-session identity.
+- Returning client: known phone opens Client Profile without a second lookup.
+- Returning client: signed-in customer remains recognized during Customer Portal navigation.
+- Returning client: Customer Booking automatically pre-fills signed-in first name, last name, phone and optional email.
+- Loyalty: signed-in customer is recognized without a second account lookup.
+- Customer Booking launcher: signed-in customer can return to the customer app without another phone prompt.
+- Exit / Return to App Launcher clears customer session.
+- Unknown phone still routes to New Client Booking and does not create an existing-client session.
+- Client Profile QR card removed.
+- Main Customer Booking QR card retained.
+
+CORE REGRESSION CHECKS — 42 TARGETED CHECKS PASS
+- App Launcher modal behavior and policy selection.
+- Booking barber dropdown populated and interactive.
+- Booking date/service dependency and available-time dropdown populated.
+- How-did-you-hear dropdown intact.
+- Deposit payment-method dropdown intact.
+- Barber Dashboard cards, next appointment, day progress and schedule sections intact.
+- Barber Messages group-chat control, conversation list and compose/send controls intact.
+- Clientele persistent alphabetical clickable list intact.
+- Client Tools persistent clickable list and selected-client/family details intact.
+- Barber POS source/service controls intact.
+- Owner management page remains selected after a second control interaction.
+- Tony-the-Barber page remains selected after a second control interaction.
+- App navigation isolation remains intact.
+- Browser JavaScript error checks passed for Launcher, Customer, Booking, Barber and Owner/Tony test harnesses.
+
+FULL NAVIGATION RENDER AUDIT — 70 CHECKS PASS
+- Owner / Shop Management: all 32 Owner views rendered without page JavaScript errors.
+- Customer Portal: all 4 Customer views rendered without page JavaScript errors.
+- Standalone Barber: all 17 Barber views accounted for; 16 runtime-rendered successfully and Social Content statically retained because its IndexedDB storage cannot be exercised in the opaque-origin sandbox harness.
+- Tony the Barber: all 17 Barber views accounted for; 16 runtime-rendered successfully and Social Content statically retained for the same IndexedDB reason.
+
+STATIC PRESERVATION AUDIT — PASS
+- v0.20 function count: 281. v0.21 function count: 287. Removed functions: 0.
+- v0.20 view count: 54. v0.21 view count: 54. Removed views: 0.
+- Launcher inline JavaScript syntax check: PASS.
+- assets/app.js JavaScript syntax check: PASS.
+- Time Clock identifiers remain removed: PASS.
+- Client Profile QR scope count: 0.
+- Customer Booking QR scope count: 1.
+
+TEST HARNESS NOTE
+The sandbox blocks Chromium navigation to localhost/file URLs. Runtime regression testing therefore used Chromium with the actual v0.21 HTML/CSS/JavaScript loaded into an in-memory page and browser local/session storage mocked with the same Storage API surface. This tests the application event wiring, renderers, controls, routing logic, and DOM behavior without changing production source. Social Content remains the one IndexedDB-dependent page that is statically verified rather than runtime-tested in this harness.

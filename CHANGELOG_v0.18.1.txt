@@ -1,0 +1,15 @@
+ICU LOOKIN BSMS v0.18.1 — NAVIGATION ISOLATION HOTFIX
+
+FIXED
+- Customer, Owner, and Barber navigation can no longer render together.
+- App mode is resolved before the main BSMS JavaScript initializes.
+- Owner App hard-hides Customer and Barber navigation.
+- Customer App hard-hides Owner and Barber navigation.
+- Individual Barber Apps hard-hide Customer and Owner navigation.
+- Correct initial view is selected immediately for each app mode.
+- Hash/launcher destination now overrides stale session state.
+- Redirect launchers clear stale app-mode state before opening the requested app.
+- Existing mobile Barber navigation remains Dashboard / Appts / Avail / More.
+
+This hotfix is intentionally defensive: navigation isolation remains correct even if
+a later feature script encounters a runtime error.

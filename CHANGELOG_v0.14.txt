@@ -1,0 +1,16 @@
+ICU LOOKIN BSMS v0.14
+
+ADDED
+- Barber deposit settings and non-refundable deposit checkout.
+- Automatic $10 deposit after most recent Cancelled or No Show appointment.
+- Booth-rent payment pages for Barber and Owner.
+- Owner acknowledgement of cash/other outside booth-rent payments.
+- Barber POS / Checkout with Quick Sale and receipts.
+- Barber Social Media Content camera/upload library using IndexedDB.
+- Email-domain autocomplete.
+
+CHANGED
+- Phone is required and positioned before optional email.
+- Phone fields use (###) ###-#### formatting.
+- Client Profile search supports phone or email.
+- Calendar/date fields default to today.

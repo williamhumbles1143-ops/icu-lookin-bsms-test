@@ -1,0 +1,60 @@
+ICU LOOKIN BSMS v0.20 — FULL STABILITY / REGRESSION RECOVERY BUILD
+
+WHY THIS BUILD WAS REBUILT
+- The v0.19 hotfix line fixed isolated routing issues but accidentally removed a large portion of the feature-complete shared JavaScript.
+- v0.20 was rebuilt from the feature-complete v0.18.3 baseline and then the confirmed post-v0.18.3 fixes were reapplied surgically.
+- Function-preservation audit confirms every named v0.18.3 function remains except the two intentionally removed Time Clock functions.
+
+CUSTOMER BOOKING
+- Restored fully functional barber, time, referral/source, deposit-payment, gift-card, and other select/drop-down controls.
+- Barber selection refreshes barber-specific services and prices.
+- Service/date changes refresh valid availability times.
+- Full booking flow was browser-tested through Review Appointment and Confirm Booking.
+- Returning customer phone found in saved appointments, walk-ins, or POS records opens Client Profile first.
+- Only an unknown phone goes to New Client Booking.
+- Customer Booking and Policies open as true foreground modals from the App Launcher.
+- Customer-facing app includes Back and Exit / Return to App Launcher controls.
+
+BARBER DASHBOARD
+- Restored the feature-complete dashboard: today's revenue, appointments, completed/remaining counts, next appointment, daily progress, schedule, notifications, and dashboard actions.
+
+BARBER MESSAGES
+- Restored full Owner direct messaging, private barber-to-barber conversations, participant-only group chats, conversation list, unread counts, sender/timestamps, compose/send controls, and group creation.
+- Preserved privacy rule: Owner cannot access private Barber-to-Barber DMs.
+- Corrected name/preview and message-body spacing.
+
+CLIENTELE + CLIENT TOOLS
+- Replaced the old selectors with persistent, searchable, alphabetical clickable client lists.
+- Client list remains visible/sticky while the barber works with the selected client.
+- Client Tools retains family members, consultation notes, customer appointment notes, and photo-reference tools.
+- Clientele retains client history, booking counts, completed/upcoming counts, and booked value.
+
+OWNER / TONY WORKSPACES
+- Preserved app isolation so Customer, Owner, and Barber navigation cannot render together.
+- Owner App opens to role choice.
+- Owner / Shop Management navigation remains on the selected Owner page after subsequent actions.
+- Tony the Barber navigation remains on the selected Barber page after subsequent actions.
+- Role-choice controls and workspace-state attributes are separate, preventing clicks from being mistaken for role changes.
+- Owner Back and Dashboard / Switch Role controls remain explicit.
+
+INDEPENDENT CONTRACTOR MODEL
+- Removed Time Clock page, Clock In/Out logic, storage keys, and related UI.
+- Workforce reflects independent contractors, availability/schedules, licensing, booth rent for non-owner barbers, and revenue.
+- Removed obsolete separate Tony Barber App launch shortcuts.
+
+OTHER RESTORED REGRESSION ITEMS
+- Restored Owner Payments renderer that had been referenced but missing.
+- Restored POS appointment/walk-in candidate function; POS Quick Sale and completion flow browser-tested.
+- Preserved Social Content capture/upload, private IndexedDB media library, filters, caption tools, download/delete, and image text-overlay editor code/UI.
+
+VALIDATION
+- JavaScript syntax: PASS.
+- Customer navigation: 4/4 views PASS.
+- Individual barber navigation: 16/16 normally testable views PASS; Social Content statically verified because sandbox browser set_content has an opaque origin that blocks IndexedDB.
+- Owner / Shop Management: 32/32 views PASS.
+- Tony the Barber: 16/16 normally testable views PASS; Social Content statically verified for the same IndexedDB sandbox limitation.
+- Booking end-to-end: PASS.
+- Barber Messages direct-send + group-chat creation: PASS.
+- POS Quick Sale completion: PASS.
+- Owner/Tony second-action navigation regression: PASS.
+- App Launcher modals and existing/unknown phone routing: PASS.

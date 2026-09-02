@@ -1,0 +1,17 @@
+ICU LOOKIN BSMS v0.18.2 — OWNER ROLE WORKSPACE FIX
+
+OWNER APP
+- Opens directly to Shop Dashboard.
+- No long Owner or Barber page menu is displayed on the opening Dashboard.
+- Owner / Shop Management role card is now functional.
+- Tony the Barber role card is now functional.
+- Owner / Shop Management displays only Owner management navigation.
+- Tony the Barber displays only Tony's barber navigation.
+- Added Dashboard / Switch Role control to both sub-workspaces.
+- Tony's personal barber navigation does not contain Booth Rent.
+- Tony remains in Owner App; there is no separate Tony Barber App.
+
+STATE / NAVIGATION
+- Owner workspace state is preserved separately from app mode.
+- Tony's barber pages remain inside Owner App and do not convert the app into a standalone barber app.
+- OWNER_APP launcher resets to the Owner Dashboard / role-selection home each time it is opened.

@@ -1,0 +1,11 @@
+ICU LOOKIN BSMS v0.17.1 HOTFIX
+
+BARBER MANAGEMENT
+- Fixed Add Barber button; it now creates a new active roster record.
+- New barbers default to Original Review Group = No.
+- Added starting-date, license-number, and license-expiration prompts during Add Barber.
+- Fixed Save control for barber management records.
+- Fixed Deactivate / Reactivate controls.
+- Deactivation preserves the barber's historical record.
+- Renamed the visible "Original rating cohort" label to "Original Review Group".
+- Barber Management changes are written to Audit History when available.

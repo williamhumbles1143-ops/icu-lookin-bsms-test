@@ -1,0 +1,14 @@
+ICU LOOKIN BSMS v0.15
+
+ADDED
+- Social Media Content image editor.
+- Multi-layer text overlays.
+- Draggable text positioning.
+- Expanded font picker.
+- Font size/color.
+- Bold, italic, underline.
+- Left/center/right alignment.
+- Text shadow.
+- Background/highlight with opacity.
+- Layer duplication and ordering.
+- Export edited copy as PNG while preserving original image.
