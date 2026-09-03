@@ -6,9 +6,9 @@ const OWNER_DIARY_KEY="icuOwnerDiaryV1",INCIDENTS_KEY="icuIncidentsV1",INSPECTIO
 const BARBERS=["Tony","Mike","Will","Henry","Mon","Kody","Selena"];
 const STATUSES=["Scheduled","Confirmed","Checked In","In Progress","Completed","Cancelled","No Show"];
 const SERVICES=[
- {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut and finish."},
+ {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut, styling & edge-up."},
  {id:"beard",name:"Beard trim",minutes:15,defaultPrice:1000,description:"Beard trim and shaping."},
- {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing."},
+ {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing. Without a haircut"},
  {id:"enhancement",name:"Enhancement",minutes:10,defaultPrice:1000,description:"Temporary enhancement service."},
  {id:"simple-design",name:"Simple design",minutes:10,defaultPrice:500,description:"Basic line or simple design."},
  {id:"detailed-design",name:"Detailed design",minutes:30,defaultPrice:2000,description:"Detailed custom hair design."},
