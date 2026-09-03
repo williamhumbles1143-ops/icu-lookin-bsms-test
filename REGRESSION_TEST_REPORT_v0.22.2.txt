@@ -1,0 +1,17 @@
+ICU Lookin Barber Studio BSMS — v0.22.2 Targeted Regression Report
+
+Scope: mobile Barber More-menu one-tap routing hotfix.
+
+PASS — assets/app.js JavaScript syntax (node --check)
+PASS — Function preservation audit: 287 named functions before and after; 0 removed, 0 added
+PASS — Barber More routing handler now closes #barberNav.mobile-more-open before showView() executes
+PASS — barberMoreButton aria-expanded is reset to false on a More-menu page selection
+PASS — Individual barber navigation uses the same #barberNav routing path
+PASS — Tony Barber workspace uses the same #barberNav routing path
+PASS — v0.22.1 mobile navigation CSS preserved unchanged
+PASS — Exit / Return to App Launcher markup preserved
+
+Code-change isolation:
+- Existing file changed: assets/app.js only
+- New files: CHANGELOG_v0.22.2.txt and this regression report
+- No HTML or CSS files modified by this hotfix

@@ -1,0 +1,9 @@
+ICU Lookin Barber Studio BSMS — v0.22.2 Mobile Navigation Hotfix
+
+Targeted fix only:
+- Selecting any page inside the mobile Barber More menu now closes the More panel immediately in the same tap.
+- The selected barber page is revealed immediately; no second tap on More is required.
+- Applies to individual barber apps and Tony's Barber workspace inside Owner App.
+- Preserves the v0.22.1 four-button mobile navigation: Dashboard | Appts | Avail | More.
+- Exit / Return to App Launcher remains available from the More menu.
+- No other BSMS feature changes intended.

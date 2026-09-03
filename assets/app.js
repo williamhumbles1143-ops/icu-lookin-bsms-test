@@ -1674,6 +1674,9 @@ document.addEventListener("click",event=>{
   if(event.target.closest("#ownerWorkspaceHome")&&isOwnerAppContext()){event.preventDefault();event.stopImmediatePropagation();openOwnerHome();return}
   if(event.target.closest("#ownerWorkspaceBack")&&isOwnerAppContext()){event.preventDefault();event.stopImmediatePropagation();ownerGoBack();return}
   const link=event.target.closest("[data-view-link]");if(!link)return;
+  // v0.22.2: this handler runs in the capture phase and stops propagation,
+  // so close the mobile More panel here before routing the selected page.
+  if(link.closest("#barberNav")){const bn=document.getElementById("barberNav"),more=document.getElementById("barberMoreButton");bn?.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false")}
   event.preventDefault();event.stopImmediatePropagation();const view=link.dataset.viewLink;
   if(isOwnerAppContext()){
     if(link.closest("#ownerNav")){if(ownerWorkspace()!=="management"){ownerViewHistory=[];setOwnerWorkspace("management")}showView(view,true);return}
@@ -1689,4 +1692,4 @@ document.addEventListener("click",event=>{
  const clientele=event.target.closest("[data-clientele-key]");if(clientele){window.__icuSelectedClienteleKey=clientele.dataset.clienteleKey;renderSelectedClientele();return}
 });
 
-window.ICU_BSMS_VERSION="0.21-final-pre-github";
+window.ICU_BSMS_VERSION="0.22.2-mobile-nav-hotfix";
