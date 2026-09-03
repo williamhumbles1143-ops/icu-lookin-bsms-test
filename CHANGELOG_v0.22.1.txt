@@ -1,0 +1,10 @@
+ICU Lookin Barber Studio BSMS v0.22.1
+Mobile Barber Navigation Hotfix
+
+- Fixed duplicate/overlapping mobile labels (Appts/Appointments and Avail/Availability).
+- Mobile barber navigation now renders exactly four controls: Dashboard | Appts | Avail | More.
+- More menu now hides the four-button bottom navigation while open.
+- More menu remains one-tap: selecting a destination opens it immediately and closes More.
+- Exit / Return to App Launcher remains available in More for every barber app.
+- Applies to individual barber apps and Tony's barber workspace inside Owner App.
+- No business logic or data features changed.
