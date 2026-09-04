@@ -1,0 +1,16 @@
+ICU Lookin BSMS v0.23 — GitHub Test Hub / Services / Policy / Auth
+
+- Root GitHub index is now an ICU Lookin Test Hub with separate Client, Barber, and Owner launchers.
+- Added simulated first-use Barber password setup, password login, Remember This Device, Sign Out, and launcher exit.
+- Remembered-device state is isolated per Barber. Tony remains under the Owner entry rather than receiving a separate regular-Barber login.
+- Fixed Owner / Shop Management mobile navigation using Dashboard | Appts | Ops | More with one-tap routing.
+- Added Barber My Services page: activate/omit services and add barber-specific services with name, duration, price, and description.
+- Barber service changes flow into My Prices, Customer Booking, Owner Pricing, and POS. Historical appointments retain services that are later made inactive.
+- Added Last Second Cancellation appointment status and next-booking minimum $10 non-refundable deposit explanation.
+- Added required Hair & Scalp Preparation Policy blocking modal before Customer Booking.
+- Added optional $5 Hair & Scalp Preparation Fee control in POS when extra cleaning/preparation is actually performed.
+- Appointment red badge now clears when that Barber opens Appointments and remains clear until a newer booking is created.
+- Expanded Owner Assistant natural-language handling for requests such as "Will's clients", Barber appointments, reviews, revenue, services, no-shows, cancellations, and timeframes.
+- Preserved v0.22.2 Barber mobile navigation behavior and existing Owner/Tony routing architecture.
+
+Prototype security note: GitHub Pages has no secure backend. Barber passwords and remembered-device state are browser-local simulation only. Production authentication and shared data should use the planned Supabase backend.

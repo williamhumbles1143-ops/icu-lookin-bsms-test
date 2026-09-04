@@ -238,3 +238,7 @@ SOCIAL CONTENT EDITOR
 - Duplicate, reorder and delete text layers.
 - Exported edit is saved as a NEW PNG in the barber's private Social Media Content library.
 - The original photo is never overwritten.
+
+
+--- v0.23 GitHub Test Hub ---
+Open index.html for the Test Hub. It separates Client, Barber, and Owner launchers. BSMS_APP.html is the shared application shell. Barber password authentication in this static build is a browser-local simulation only; production authentication and shared data require the planned Supabase backend.

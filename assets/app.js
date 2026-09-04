@@ -4,11 +4,11 @@ const OWNER_BARBER_NAME="Tony";
 const OWNER_DIARY_KEY="icuOwnerDiaryV1",INCIDENTS_KEY="icuIncidentsV1",INSPECTIONS_KEY="icuInspectionsV1",INSPECTION_ISSUES_KEY="icuInspectionIssuesV1",DOCUMENTS_KEY="icuDocumentsV1",AUDIT_KEY="icuAuditV1",CHECKLISTS_KEY="icuChecklistsV1",SHOP_STATUS_KEY="icuShopStatusV1",OWNER_SETTINGS_KEY="icuOwnerSettingsV1",BARBER_ROSTER_KEY="icuBarberRosterV1",CAMERA_CONFIG_KEY="icuCameraConfigV1",GROWTH_CAMPAIGNS_KEY="icuGrowthCampaignsV1",REFERRALS_KEY="icuReferralsV1",ATTRIBUTION_KEY="icuAttributionV1";
 
 const BARBERS=["Tony","Mike","Will","Henry","Mon","Kody","Selena"];
-const STATUSES=["Scheduled","Confirmed","Checked In","In Progress","Completed","Cancelled","No Show"];
+const STATUSES=["Scheduled","Confirmed","Checked In","In Progress","Completed","Cancelled","Last Second Cancellation","No Show"];
 const SERVICES=[
  {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut, styling & edge-up."},
  {id:"beard",name:"Beard trim",minutes:15,defaultPrice:1000,description:"Beard trim and shaping."},
- {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing. Without a haircut"},
+ {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing, without a haircut."},
  {id:"enhancement",name:"Enhancement",minutes:10,defaultPrice:1000,description:"Temporary enhancement service."},
  {id:"simple-design",name:"Simple design",minutes:10,defaultPrice:500,description:"Basic line or simple design."},
  {id:"detailed-design",name:"Detailed design",minutes:30,defaultPrice:2000,description:"Detailed custom hair design."},
@@ -21,6 +21,8 @@ const APPOINTMENTS_KEY="icuLookinAppointmentsV3";
 const PRICING_KEY="icuLookinPricingV1";
 const AFTER_HOURS_CUSTOMER_FEE=1500;
 const AFTER_HOURS_BARBER_FEE=2500;
+const HAIR_SCALP_PREPARATION_FEE=500;
+const BARBER_SERVICE_PREFS_KEY="icuBarberServicePrefsV1",CUSTOM_SERVICES_KEY="icuCustomServicesV1",HAIR_SCALP_POLICY_SESSION_KEY="icuHairScalpPolicyAgreedV1";
 const NORMAL_CLOSE_MINUTE=19*60;
 const LATEST_START_MINUTE=21*60;
 const MESSAGES_KEY="icuLookinMessagesV1";
@@ -41,11 +43,18 @@ function formatTime(value){return new Intl.DateTimeFormat("en-US",{hour:"numeric
 function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2600)}
 function loadAppointments(){try{return JSON.parse(localStorage.getItem(APPOINTMENTS_KEY))||[]}catch{return[]}}
 function saveAppointments(items){localStorage.setItem(APPOINTMENTS_KEY,JSON.stringify(items))}
+function loadCustomServices(){return loadKey(CUSTOM_SERVICES_KEY,[])}
+function saveCustomServices(items){saveKey(CUSTOM_SERVICES_KEY,items)}
+function allServices(){return [...SERVICES,...loadCustomServices()]}
+function loadBarberServicePrefs(){return loadKey(BARBER_SERVICE_PREFS_KEY,{})}
+function saveBarberServicePrefs(v){saveKey(BARBER_SERVICE_PREFS_KEY,v)}
+function eligibleServicesForBarber(barber){return allServices().filter(service=>!service.barberOnly||service.barberOnly===barber)}
+function serviceIsActiveForBarber(barber,serviceId){return !(loadBarberServicePrefs()[barber]?.inactive||[]).includes(serviceId)}
 function defaultPricing(){
  const data={};
  BARBERS.forEach(barber=>{
    data[barber]={};
-   SERVICES.filter(service=>!service.barberOnly||service.barberOnly===barber).forEach(service=>{
+   eligibleServicesForBarber(barber).forEach(service=>{
      data[barber][service.id]={price:service.defaultPrice,locked:false,override:false};
    });
  });
@@ -65,8 +74,8 @@ function loadPricing(){
  }catch{return defaults}
 }
 function savePricing(data){localStorage.setItem(PRICING_KEY,JSON.stringify(data))}
-function serviceById(id){return SERVICES.find(service=>service.id===id)}
-function servicesForBarber(barber){return SERVICES.filter(service=>!service.barberOnly||service.barberOnly===barber)}
+function serviceById(id){return allServices().find(service=>service.id===id)}
+function servicesForBarber(barber,includeInactive=false){const eligible=eligibleServicesForBarber(barber);return includeInactive?eligible:eligible.filter(service=>serviceIsActiveForBarber(barber,service.id))}
 function effectivePrice(barber,serviceId){
  const entry=loadPricing()[barber]?.[serviceId];
  return Number.isFinite(Number(entry?.price))?Number(entry.price):serviceById(serviceId)?.defaultPrice||0;
@@ -96,7 +105,7 @@ function uniqueAfterHoursCharges(items){return uniqueAfterHoursChargeCount(items
 function overlap(aStart,aEnd,bStart,bEnd){return new Date(aStart)<new Date(bEnd)&&new Date(aEnd)>new Date(bStart)}
 function activeWalkIns(){return loadKey(WALKIN_KEY,[]).filter(w=>!["Cancelled","Completed"].includes(w.status)&&w.barber&&w.startAt&&w.endAt)}
 function hasConflict(barber,start,end){
- return loadAppointments().some(a=>a.barber===barber&&a.status!=="Cancelled"&&overlap(start,end,a.startAt,a.endAt))||
+ return loadAppointments().some(a=>a.barber===barber&&!["Cancelled","Last Second Cancellation"].includes(a.status)&&overlap(start,end,a.startAt,a.endAt))||
  activeWalkIns().some(w=>w.barber===barber&&overlap(start,end,w.startAt,w.endAt))
 }
 function normalizePhone(value=""){return String(value).replace(/\D/g,"").slice(-10)}
@@ -199,7 +208,7 @@ function renderCustomerServices(){
  target.innerHTML=servicesForBarber(barber).map(service=>`
   <label class="service-row ${service.barberOnly?"barber-exclusive":""}">
    <input type="checkbox" value="${service.id}">
-   <span class="service-copy"><strong>${esc(service.name)}</strong><small>${esc(service.description)}</small>${service.barberOnly?'<span class="exclusive-tag">Kody only</span>':""}</span>
+   <span class="service-copy"><strong>${esc(service.name)}</strong><small>${esc(service.description)}</small>${service.barberOnly?`<span class="exclusive-tag">${esc(service.barberOnly)} only</span>`:""}</span>
    <span class="service-price">${service.minutes} min<strong>${money(effectivePrice(barber,service.id))}</strong></span>
   </label>`).join("");
 }
@@ -329,6 +338,10 @@ function refreshTimes(){
 
  updateBookingSummary();
 }
+function hairScalpPolicyAgreed(){return Boolean(sessionStorage.getItem(HAIR_SCALP_POLICY_SESSION_KEY))}
+function ensureHairScalpPolicyForBooking(){if(appMode()!=="customer"||hairScalpPolicyAgreed())return;const dialog=$("#hairScalpPolicyModal");if(dialog&&!dialog.open)setTimeout(()=>{if(!dialog.open)dialog.showModal()},0)}
+function agreeHairScalpPolicy(){sessionStorage.setItem(HAIR_SCALP_POLICY_SESSION_KEY,new Date().toISOString());$("#hairScalpPolicyModal")?.close();toast("Hair & Scalp Preparation Policy acknowledged.")}
+
 function bookingSummaryHtml(){
  const barber=$("#barber").value,ids=selectedIds(),start=$("#time").value,after=isAfterHoursStart(start);
  const name=[$("#firstName").value.trim(),$("#lastName").value.trim()].filter(Boolean).join(" ")||"Not entered";
@@ -361,7 +374,7 @@ function reviewBooking(){
  const priceSnapshot={};ids.forEach(id=>priceSnapshot[id]=effectivePrice(barber,id));
  const serviceTotal=Object.values(priceSnapshot).reduce((sum,value)=>sum+Number(value),0);
  const deposit=depositRequirement(barber,$("#phone").value,$("#email").value);
- pending={id:`appt-${Date.now()}-${Math.floor(Math.random()*10000)}`,firstName:$("#firstName").value.trim(),lastName:$("#lastName").value.trim(),email:$("#email").value.trim().toLowerCase(),phone:formatPhone($("#phone").value),serviceIds:ids,barber,startAt:start,endAt:new Date(new Date(start).getTime()+duration*60000).toISOString(),notes:$("#notes").value.trim(),howHeard:$("#howHeard")?.value||"",status:"Scheduled",priceSnapshot,afterHours:after,customerAfterHoursFee:after?AFTER_HOURS_CUSTOMER_FEE:0,barberAfterHoursFee:after?AFTER_HOURS_BARBER_FEE:0,customerTotal:serviceTotal+(after?AFTER_HOURS_CUSTOMER_FEE:0),depositRequired:deposit.amount,depositReason:deposit.reason,depositStatus:deposit.required?"Pending":"Not Required",createdAt:new Date().toISOString()};
+ pending={id:`appt-${Date.now()}-${Math.floor(Math.random()*10000)}`,firstName:$("#firstName").value.trim(),lastName:$("#lastName").value.trim(),email:$("#email").value.trim().toLowerCase(),phone:formatPhone($("#phone").value),serviceIds:ids,barber,startAt:start,endAt:new Date(new Date(start).getTime()+duration*60000).toISOString(),notes:$("#notes").value.trim(),howHeard:$("#howHeard")?.value||"",status:"Scheduled",priceSnapshot,afterHours:after,customerAfterHoursFee:after?AFTER_HOURS_CUSTOMER_FEE:0,barberAfterHoursFee:after?AFTER_HOURS_BARBER_FEE:0,customerTotal:serviceTotal+(after?AFTER_HOURS_CUSTOMER_FEE:0),depositRequired:deposit.amount,depositReason:deposit.reason,depositPriorStatus:deposit.prior?.status||"",depositStatus:deposit.required?"Pending":"Not Required",hairScalpPolicyAcknowledgedAt:sessionStorage.getItem(HAIR_SCALP_POLICY_SESSION_KEY)||"",createdAt:new Date().toISOString()};
  $("#reviewDetails").innerHTML=`<div class="review-grid">
   <div><span>Customer</span><strong>${esc(pending.firstName+" "+pending.lastName)}</strong></div>
   <div><span>Phone</span><strong>${esc(pending.phone)}</strong></div>${pending.email?`<div><span>Email</span><strong>${esc(pending.email)}</strong></div>`:""}
@@ -373,7 +386,7 @@ function reviewBooking(){
   <div><span>Total</span><strong>${money(pending.customerTotal)}</strong></div>
  </div>`;
  const depositBox=$("#depositCheckout"),ack=$("#depositAcknowledgement");
- if(pending.depositRequired){depositBox.classList.remove("hidden");ack.checked=false;$("#depositCheckoutText").textContent=`${money(pending.depositRequired)} is due now. This deposit is non-refundable and will be applied toward the appointment balance. ${pending.depositReason.includes("Prior")?"The deposit requirement was triggered by the most recent cancelled/no-show booking.":""}`;$("#depositAcknowledgementText").textContent=`I understand that the ${money(pending.depositRequired)} deposit is non-refundable and will be applied toward my appointment balance.`;$("#confirmButton").textContent="Pay Deposit & Confirm Booking"}
+ if(pending.depositRequired){depositBox.classList.remove("hidden");ack.checked=false;const prior=pending.depositPriorStatus||"";let reasonText="";if(prior==="Last Second Cancellation")reasonText=" This requirement is because the previous appointment was cancelled too close to the scheduled service time to give the barber a reasonable opportunity to fill that opening with another client.";else if(pending.depositReason.includes("Prior"))reasonText=" The deposit requirement was triggered by the most recent cancelled/no-show booking.";$("#depositCheckoutText").textContent=`${money(pending.depositRequired)} is due now. This deposit is non-refundable and will be applied toward the appointment balance.${reasonText}`;$("#depositAcknowledgementText").textContent=`I understand that the ${money(pending.depositRequired)} deposit is non-refundable and will be applied toward my appointment balance.`;$("#confirmButton").textContent="Pay Deposit & Confirm Booking"}
  else{depositBox.classList.add("hidden");ack.checked=false;$("#confirmButton").textContent="Confirm booking"}
  $("#reviewPanel").classList.remove("hidden");$("#successPanel").classList.add("hidden");$("#reviewPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
@@ -386,7 +399,7 @@ function confirmBooking(){
    finalized.depositPaid=finalized.depositRequired;finalized.depositStatus="Paid";finalized.depositPaymentMethod=$("#depositPaymentMethod").value;finalized.depositAcknowledgedAt=new Date().toISOString();finalized.balanceDue=Math.max(0,finalized.customerTotal-finalized.depositPaid);
    const deposits=loadKey(DEPOSIT_PAYMENTS_KEY,[]);deposits.push({id:`dep-${Date.now()}`,appointmentId:finalized.id,barber:finalized.barber,customer:`${finalized.firstName} ${finalized.lastName}`,phone:finalized.phone,amount:finalized.depositPaid,method:finalized.depositPaymentMethod,nonRefundable:true,reason:finalized.depositReason,paidAt:new Date().toISOString()});saveKey(DEPOSIT_PAYMENTS_KEY,deposits)
  }else{finalized.depositPaid=0;finalized.balanceDue=finalized.customerTotal}
- const items=loadAppointments();items.push(finalized);saveAppointments(items);setCustomerSession(finalized.phone);if(finalized.howHeard){const attrs=loadKey(ATTRIBUTION_KEY,[]);attrs.push({id:`attr-${Date.now()}`,appointmentId:finalized.id,source:finalized.howHeard,createdAt:new Date().toISOString()});saveKey(ATTRIBUTION_KEY,attrs)}
+ const items=loadAppointments();items.push(finalized);saveAppointments(items);sessionStorage.removeItem(HAIR_SCALP_POLICY_SESSION_KEY);setCustomerSession(finalized.phone);if(finalized.howHeard){const attrs=loadKey(ATTRIBUTION_KEY,[]);attrs.push({id:`attr-${Date.now()}`,appointmentId:finalized.id,source:finalized.howHeard,createdAt:new Date().toISOString()});saveKey(ATTRIBUTION_KEY,attrs)}
  const successHtml=`<div class="review-grid"><div><span>Date</span><strong>${esc(formatDateTime(finalized.startAt))}</strong></div><div><span>Barber</span><strong>${esc(finalized.barber)}</strong></div><div><span>Services</span><strong>${esc(serviceNames(finalized.serviceIds))}</strong></div>${finalized.notes?`<div><span>Customer Notes</span><strong>${esc(finalized.notes)}</strong></div>`:""}${finalized.afterHours?`<div><span>After-Hours Fee</span><strong>${money(AFTER_HOURS_CUSTOMER_FEE)}</strong></div>`:""}${finalized.depositPaid?`<div><span>Non-Refundable Deposit Paid</span><strong>${money(finalized.depositPaid)}</strong></div><div><span>Remaining Balance</span><strong>${money(finalized.balanceDue)}</strong></div>`:""}<div><span>Total</span><strong>${money(finalized.customerTotal)}</strong></div></div>`;
  resetBookingForm();
  $("#successDetails").innerHTML=successHtml;
@@ -421,7 +434,7 @@ function renderOwnerAppointments(){
 function pricingRow(service,entry,ownerMode){
  const locked=Boolean(entry.locked);
  return `<div class="pricing-row" data-service-id="${service.id}">
-  <div class="price-name"><strong>${esc(service.name)}</strong><small>${esc(service.description)} • Default ${money(service.defaultPrice)}</small>${!ownerMode&&locked?'<span class="locked-indicator">Locked by Owner</span>':""}</div>
+  <div class="price-name"><strong>${esc(service.name)}</strong><small>${esc(service.description)} • Default ${money(service.defaultPrice)}${service.customByBarber?` • Added by ${esc(service.customByBarber)}`:""}</small>${!ownerMode&&locked?'<span class="locked-indicator">Locked by Owner</span>':""}</div>
   <label class="price-input-wrap"><span>$</span><input class="pricing-input" type="number" min="0" step="0.01" value="${(entry.price/100).toFixed(2)}" ${!ownerMode&&locked?"disabled":""}></label>
   ${ownerMode?`<label class="lock-control"><input class="pricing-lock" type="checkbox" ${locked?"checked":""}> Lock price</label>`:"<span></span>"}
  </div>`;
@@ -450,6 +463,24 @@ function saveBarberPricing(){
    entry.price=Math.max(0,Math.round(Number(row.querySelector(".pricing-input").value||0)*100));entry.override=false;
  });
  savePricing(pricing);renderBarberPricing();toast("Your prices were saved.");
+}
+
+function renderBarberServices(){
+ const barber=activeBarber(),prefs=loadBarberServicePrefs(),inactive=new Set(prefs[barber]?.inactive||[]),services=eligibleServicesForBarber(barber);
+ $("#barberServicesTitle").textContent=`${barber}'s Services`;
+ $("#barberServicesList").innerHTML=services.length?services.map(service=>`<label class="service-management-row"><input type="checkbox" data-barber-service-toggle="${service.id}" ${inactive.has(service.id)?"":"checked"}><span><strong>${esc(service.name)}</strong><small>${service.minutes} min • ${money(effectivePrice(barber,service.id))}${service.customByBarber?" • Added by you":""}</small><small>${esc(service.description||"")}</small></span><em>${inactive.has(service.id)?"Not offered":"Active"}</em></label>`).join(""):'<p class="help">No services are available.</p>'
+}
+function setBarberServiceActive(serviceId,active){
+ const barber=activeBarber(),prefs=loadBarberServicePrefs();prefs[barber]=prefs[barber]||{inactive:[]};const set=new Set(prefs[barber].inactive||[]);active?set.delete(serviceId):set.add(serviceId);prefs[barber].inactive=[...set];saveBarberServicePrefs(prefs);renderBarberServices();toast(active?"Service added to your active menu.":"Service removed from your active menu.")
+}
+function addCustomBarberService(){
+ const barber=activeBarber(),name=$("#newServiceName").value.trim(),minutes=Math.max(5,Math.round(Number($("#newServiceMinutes").value||0))),price=Math.max(0,Math.round(Number($("#newServicePrice").value||0)*100)),description=$("#newServiceDescription").value.trim();
+ if(!name){toast("Enter a service name.");$("#newServiceName").focus();return}
+ if(!minutes){toast("Enter the service duration.");return}
+ const idBase=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"service",id=`custom-${barber.toLowerCase()}-${idBase}-${Date.now().toString(36)}`;
+ const items=loadCustomServices();items.push({id,name,minutes,defaultPrice:price,description:description||`${name} offered by ${barber}.`,barberOnly:barber,customByBarber:barber,createdAt:new Date().toISOString()});saveCustomServices(items);
+ const pricing=loadPricing();pricing[barber]=pricing[barber]||{};pricing[barber][id]={price,locked:false,override:false};savePricing(pricing);
+ $("#newServiceName").value="";$("#newServiceDescription").value="";$("#newServiceMinutes").value="30";$("#newServicePrice").value="25.00";renderBarberServices();toast(`${name} was added to your services.`)
 }
 
 function periodBounds(range,dateValue){
@@ -494,7 +525,7 @@ function analyticsFor(barber,dateValue){
  const days=[];for(let i=6;i>=0;i--){const d=new Date(ref);d.setDate(d.getDate()-i);const start=new Date(d);start.setHours(0,0,0,0);const end=new Date(d);end.setHours(23,59,59,999);days.push({label:d.toLocaleDateString("en-US",{weekday:"short"}),value:countBetween(all,start,end)})}
  const weeks=[];const currentWeek=startOfWeek(ref);for(let i=5;i>=0;i--){const start=new Date(currentWeek);start.setDate(start.getDate()-7*i);const end=new Date(start);end.setDate(end.getDate()+6);end.setHours(23,59,59,999);weeks.push({label:`${start.getMonth()+1}/${start.getDate()}`,value:countBetween(all,start,end)})}
  const months=[];for(let i=5;i>=0;i--){const d=new Date(ref.getFullYear(),ref.getMonth()-i,1);const start=new Date(d),end=new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59,999);months.push({label:d.toLocaleDateString("en-US",{month:"short"}),value:countBetween(all,start,end)})}
- const serviceCounts={};SERVICES.forEach(s=>serviceCounts[s.id]=0);all.forEach(a=>a.serviceIds.forEach(id=>serviceCounts[id]=(serviceCounts[id]||0)+1));
+ const serviceCounts={};allServices().forEach(s=>serviceCounts[s.id]=0);all.forEach(a=>a.serviceIds.forEach(id=>serviceCounts[id]=(serviceCounts[id]||0)+1));
  const services=Object.entries(serviceCounts).filter(([id])=>servicesForBarber(barber).some(s=>s.id===id)).map(([id,value])=>({label:serviceById(id).name,value})).sort((a,b)=>b.value-a.value);
  const clientMap=new Map();
  all.forEach(a=>{const key=a.email||`${a.firstName}|${a.lastName}|${a.phone}`;const item=clientMap.get(key)||{name:`${a.firstName} ${a.lastName}`,email:a.email,dates:[]};item.dates.push(new Date(a.startAt));clientMap.set(key,item)});
@@ -529,7 +560,7 @@ function renderClientele(){
  if(!window.__icuSelectedClienteleKey||!all.some(c=>c.key===window.__icuSelectedClienteleKey))window.__icuSelectedClienteleKey=all[0]?.key||"";
  const visible=all.filter(c=>!query||`${c.firstName} ${c.lastName} ${c.email} ${c.phone}`.toLowerCase().includes(query));
  $("#barberClienteleTitle").textContent=`${barber}'s Clientele`;
- $("#clienteleStats").innerHTML=[["Unique clients",all.length],["Total bookings",appointments.length],["Upcoming",appointments.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Cancelled").length],["Completed",appointments.filter(a=>a.status==="Completed").length]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");
+ $("#clienteleStats").innerHTML=[["Unique clients",all.length],["Total bookings",appointments.length],["Upcoming",appointments.filter(a=>new Date(a.startAt)>=new Date()&&!["Cancelled","Last Second Cancellation"].includes(a.status)).length],["Completed",appointments.filter(a=>a.status==="Completed").length]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");
  $("#clienteleDirectoryList").innerHTML=visible.length?visible.map(c=>`<button class="client-directory-button ${c.key===window.__icuSelectedClienteleKey?"active":""}" type="button" data-clientele-key="${esc(c.key)}"><strong>${esc((c.lastName||"")+", "+(c.firstName||""))}</strong><small>${esc(c.phone||c.email||"No contact information")}</small></button>`).join(""):'<p class="help">No clients match this search.</p>';
  renderSelectedClientele()
 }
@@ -537,11 +568,11 @@ function renderSelectedClientele(){
  const barber=activeBarber(),c=clientsForBarber(barber).find(x=>x.key===window.__icuSelectedClienteleKey),target=$("#clienteleDetail");
  if(!c){target.innerHTML='<div class="panel"><h2>No client selected</h2><p>Choose a client from the alphabetical list.</p></div>';return}
  $("#clienteleDirectoryList")?.querySelectorAll("[data-clientele-key]").forEach(b=>b.classList.toggle("active",b.dataset.clienteleKey===c.key));
- const appts=c.appointments.filter(a=>a.barber===barber).slice().sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)),completed=appts.filter(a=>a.status==="Completed"),upcoming=appts.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Cancelled"),value=appts.reduce((s,a)=>s+customerTotalForAppointment(a),0),familyStore=loadKey(FAMILY_KEY,{}),family=familyStore[customerStorageKey(c)]||familyStore[c.email]||[];
+ const appts=c.appointments.filter(a=>a.barber===barber).slice().sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)),completed=appts.filter(a=>a.status==="Completed"),upcoming=appts.filter(a=>new Date(a.startAt)>=new Date()&&!["Cancelled","Last Second Cancellation"].includes(a.status)),value=appts.reduce((s,a)=>s+customerTotalForAppointment(a),0),familyStore=loadKey(FAMILY_KEY,{}),family=familyStore[customerStorageKey(c)]||familyStore[c.email]||[];
  target.innerHTML=`<div class="profile-grid"><section class="profile-card"><p class="eyebrow">Client</p><h2>${esc(c.firstName+" "+c.lastName)}</h2><p>${esc(c.phone||"No phone")}${c.email?`<br>${esc(c.email)}`:""}</p><div class="profile-row"><span>Bookings with ${esc(barber)}</span><strong>${appts.length}</strong></div><div class="profile-row"><span>Completed</span><strong>${completed.length}</strong></div><div class="profile-row"><span>Upcoming</span><strong>${upcoming.length}</strong></div><div class="profile-row"><span>Booked value</span><strong>${money(value)}</strong></div></section><section class="profile-card"><h2>Family Members</h2>${family.length?family.map(f=>`<div class="profile-row"><span>${esc(f.name)}</span><strong>${esc(f.relationship||"Family")}</strong></div>`).join(""):'<p class="help">No family members saved.</p>'}<h2>Recent Appointments</h2>${appts.slice(0,10).map(a=>`<div class="profile-row"><span>${esc(formatDateTime(a.startAt))}<br><small>${esc(serviceNames(a.serviceIds||[]))}</small></span><strong>${esc(a.status)}</strong></div>`).join("")||'<p class="help">No appointments.</p>'}</section></div>`
 }
 
-function calendarStatusClass(status){if(status==="Confirmed")return"confirmed";if(status==="Checked In"||status==="In Progress")return"progress";if(status==="Completed")return"completed";if(status==="Cancelled"||status==="No Show")return"cancelled";return"scheduled"}
+function calendarStatusClass(status){if(status==="Confirmed")return"confirmed";if(status==="Checked In"||status==="In Progress")return"progress";if(status==="Completed")return"completed";if(["Cancelled","Last Second Cancellation","No Show"].includes(status))return"cancelled";return"scheduled"}
 function renderCalendarTimes(){
  const target=$("#calendarTimes");if(target.children.length)return;let html="";
  for(let minute=9*60;minute<=23*60;minute+=15){const hour=Math.floor(minute/60),min=minute%60,label=min===0?new Intl.DateTimeFormat("en-US",{hour:"numeric"}).format(new Date(2000,0,1,hour,min)):"";html+=`<div class="calendar-time-label ${min===0?"hour-mark":""}">${label}</div>`}
@@ -596,22 +627,22 @@ function defaultLocations(){return[
 ]}
 function loadLocations(){try{return JSON.parse(localStorage.getItem(LOCATION_KEY))||defaultLocations()}catch{return defaultLocations()}}
 function saveLocations(items){localStorage.setItem(LOCATION_KEY,JSON.stringify(items))}
-function appointmentsForDate(dateValue){return loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&a.status!=="Cancelled")}
+function appointmentsForDate(dateValue){return loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&!["Cancelled","Last Second Cancellation"].includes(a.status))}
 function completedInBounds(start,end,barber=""){return loadAppointments().filter(a=>a.status==="Completed"&&(!barber||a.barber===barber)&&new Date(a.startAt)>=start&&new Date(a.startAt)<=end)}
 function renderMiniSchedule(items,target){
  target.innerHTML=items.length?items.sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)).map(a=>`<div class="mini-appointment"><span class="time">${esc(formatTime(a.startAt))}</span><div class="meta"><strong>${esc(a.firstName+" "+a.lastName)}</strong><small>${esc(a.barber+" • "+serviceNames(a.serviceIds))}</small></div><strong>${money(customerTotalForAppointment(a))}</strong></div>`).join(""):'<p class="help">No appointments scheduled.</p>'
 }
 function renderOwnerDashboard(){
- const dateValue=today(),items=appointmentsForDate(dateValue),completed=items.filter(a=>a.status==="Completed"),remaining=items.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Completed"),after=items.filter(a=>a.afterHours),cancelled=loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&a.status==="Cancelled"),revenue=completed.reduce((sum,a)=>sum+customerTotalForAppointment(a),0);
+ const dateValue=today(),items=appointmentsForDate(dateValue),completed=items.filter(a=>a.status==="Completed"),remaining=items.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Completed"),after=items.filter(a=>a.afterHours),cancelled=loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&a.status==="Cancelled"),lastSecond=loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&a.status==="Last Second Cancellation"),revenue=completed.reduce((sum,a)=>sum+customerTotalForAppointment(a),0);
  $("#dashboardDateLabel").textContent=new Intl.DateTimeFormat("en-US",{weekday:"long",month:"long",day:"numeric"}).format(new Date(`${dateValue}T12:00:00`));
- $("#ownerDashboardCards").innerHTML=[["Today's revenue",money(revenue)],["Today's customers",items.length],["Appointments remaining",remaining.length],["After-hours today",after.length],["Completed",completed.length],["Cancelled",cancelled.length],["Active barbers",new Set(items.map(a=>a.barber)).size],["Shop charges",money(uniqueAfterHoursCharges(after.filter(a=>a.status==="Completed")))]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");
+ $("#ownerDashboardCards").innerHTML=[["Today's revenue",money(revenue)],["Today's customers",items.length],["Appointments remaining",remaining.length],["After-hours today",after.length],["Completed",completed.length],["Cancelled",cancelled.length],["Last Second Cancels",lastSecond.length],["Active barbers",new Set(items.map(a=>a.barber)).size],["Shop charges",money(uniqueAfterHoursCharges(after.filter(a=>a.status==="Completed")))]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");
  renderMiniSchedule(items,$("#ownerDashboardSchedule"));
- const alerts=[];if(after.length)alerts.push({type:"warning",title:`${after.length} after-hours appointment${after.length===1?"":"s"}`,detail:"Review the $25 barber facility charges."});if(cancelled.length)alerts.push({type:"danger",title:`${cancelled.length} cancellation${cancelled.length===1?"":"s"} today`,detail:"Consider filling the open times."});const low=loadInventory().filter(i=>i.quantity<i.minimum);if(low.length)alerts.push({type:"warning",title:`${low.length} low-stock item${low.length===1?"":"s"}`,detail:"Inventory reorder is recommended."});if(!alerts.length)alerts.push({type:"success",title:"No urgent issues",detail:"The shop is operating normally."});
+ const alerts=[];if(after.length)alerts.push({type:"warning",title:`${after.length} after-hours appointment${after.length===1?"":"s"}`,detail:"Review the $25 barber facility charges."});if(cancelled.length||lastSecond.length)alerts.push({type:"danger",title:`${cancelled.length+lastSecond.length} cancellation${cancelled.length+lastSecond.length===1?"":"s"} today`,detail:lastSecond.length?`${lastSecond.length} marked Last Second Cancellation. Consider filling the open times.`:"Consider filling the open times."});const low=loadInventory().filter(i=>i.quantity<i.minimum);if(low.length)alerts.push({type:"warning",title:`${low.length} low-stock item${low.length===1?"":"s"}`,detail:"Inventory reorder is recommended."});if(!alerts.length)alerts.push({type:"success",title:"No urgent issues",detail:"The shop is operating normally."});
  $("#ownerAlerts").innerHTML=alerts.map(a=>`<div class="alert-item ${a.type}"><div><strong>${esc(a.title)}</strong><p>${esc(a.detail)}</p></div></div>`).join("");
  $("#ownerBarberSnapshot").innerHTML=BARBERS.map(b=>{const bItems=items.filter(a=>a.barber===b),bCompleted=bItems.filter(a=>a.status==="Completed"),bRevenue=bCompleted.reduce((s,a)=>s+customerTotalForAppointment(a),0);return`<div class="snapshot-item"><div><strong>${b}</strong><span class="help">${bItems.length} appointments • ${bCompleted.length} completed</span></div><strong>${money(bRevenue)}</strong></div>`}).join("");
 }
 function renderBarberDashboard(){
- const barber=activeBarber(),dateValue=today(),items=individualAppointments().filter(a=>a.startAt.startsWith(dateValue)&&a.status!=="Cancelled").sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)),completed=items.filter(a=>a.status==="Completed"),upcoming=items.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Completed"),revenue=completed.reduce((s,a)=>s+netBarberRevenue(a),0),next=upcoming[0];
+ const barber=activeBarber(),dateValue=today(),items=individualAppointments().filter(a=>a.startAt.startsWith(dateValue)&&!["Cancelled","Last Second Cancellation"].includes(a.status)).sort((a,b)=>new Date(a.startAt)-new Date(b.startAt)),completed=items.filter(a=>a.status==="Completed"),upcoming=items.filter(a=>new Date(a.startAt)>=new Date()&&a.status!=="Completed"),revenue=completed.reduce((s,a)=>s+netBarberRevenue(a),0),next=upcoming[0];
  $("#barberDashboardTitle").textContent=`${barber}'s Dashboard`;
  $("#barberDashboardCards").innerHTML=[["Today's revenue",money(revenue)],["Appointments today",items.length],["Completed",completed.length],["Remaining",upcoming.length]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");
  $("#barberNextAppointment").innerHTML=next?`<div class="appointment-main"><span class="status">${esc(next.status)}</span><h2>${esc(formatTime(next.startAt))}</h2><p>${esc(next.firstName+" "+next.lastName)}</p><p class="help">${esc(serviceNames(next.serviceIds))}</p><p class="help">${esc(next.phone||next.email)}</p></div>`:'<p class="help">No upcoming appointments today.</p>';
@@ -619,8 +650,8 @@ function renderBarberDashboard(){
  renderMiniSchedule(items,$("#barberDashboardSchedule"));
 }
 function performanceMetrics(barber,range,dateValue){
- const bounds=periodBounds(range,dateValue),all=loadAppointments().filter(a=>a.barber===barber&&new Date(a.startAt)>=bounds.start&&new Date(a.startAt)<=bounds.end),completed=all.filter(a=>a.status==="Completed"),cancelled=all.filter(a=>a.status==="Cancelled"),noShow=all.filter(a=>a.status==="No Show"),revenue=completed.reduce((s,a)=>s+customerTotalForAppointment(a),0),clients=new Set(completed.map(a=>a.email||`${a.firstName}|${a.lastName}`)),repeatClients=[...clients].filter(key=>loadAppointments().filter(a=>(a.email||`${a.firstName}|${a.lastName}`)===key&&a.barber===barber&&a.status==="Completed").length>1);
- return{appointments:all.length,completed:completed.length,revenue,avg:completed.length?revenue/completed.length:0,customers:clients.size,repeatRate:clients.size?repeatClients.length/clients.size*100:0,cancelRate:all.length?cancelled.length/all.length*100:0,noShowRate:all.length?noShow.length/all.length*100:0}
+ const bounds=periodBounds(range,dateValue),all=loadAppointments().filter(a=>a.barber===barber&&new Date(a.startAt)>=bounds.start&&new Date(a.startAt)<=bounds.end),completed=all.filter(a=>a.status==="Completed"),cancelled=all.filter(a=>a.status==="Cancelled"),lastSecond=all.filter(a=>a.status==="Last Second Cancellation"),noShow=all.filter(a=>a.status==="No Show"),revenue=completed.reduce((s,a)=>s+customerTotalForAppointment(a),0),clients=new Set(completed.map(a=>a.email||`${a.firstName}|${a.lastName}`)),repeatClients=[...clients].filter(key=>loadAppointments().filter(a=>(a.email||`${a.firstName}|${a.lastName}`)===key&&a.barber===barber&&a.status==="Completed").length>1);
+ return{appointments:all.length,completed:completed.length,revenue,avg:completed.length?revenue/completed.length:0,customers:clients.size,repeatRate:clients.size?repeatClients.length/clients.size*100:0,cancelRate:all.length?(cancelled.length+lastSecond.length)/all.length*100:0,noShowRate:all.length?noShow.length/all.length*100:0}
 }
 function renderPerformance(){
  const range=$("#performanceRange").value,date=$("#performanceDate").value;$("#performanceCards").innerHTML=BARBERS.map(b=>{const m=performanceMetrics(b,range,date);return`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">Barber</p><h2>${b}</h2></div><strong>${money(m.revenue)}</strong></div><div class="metric-grid"><div class="metric"><span>Customers</span><strong>${m.customers}</strong></div><div class="metric"><span>Completed</span><strong>${m.completed}</strong></div><div class="metric"><span>Average ticket</span><strong>${money(m.avg)}</strong></div><div class="metric"><span>Repeat rate</span><strong>${m.repeatRate.toFixed(0)}%</strong></div><div class="metric"><span>Cancellation</span><strong>${m.cancelRate.toFixed(0)}%</strong></div><div class="metric"><span>No-show</span><strong>${m.noShowRate.toFixed(0)}%</strong></div></div></article>`}).join("");
@@ -654,45 +685,40 @@ function renderLocations(){
  $("#locationCards").innerHTML=locations.map(l=>`<article class="location-card ${l.status==="Future"?"future":""}"><p class="eyebrow">${esc(l.status)}</p><h2>${esc(l.name)}</h2><div class="breakdown-row"><span>Monthly revenue</span><strong>${money(l.revenue)}</strong></div><div class="breakdown-row"><span>Customers</span><strong>${l.customers}</strong></div><div class="breakdown-row"><span>Barbers</span><strong>${l.barbers}</strong></div></article>`).join("")
 }
 function answerAssistant(question){
- const q=String(question||"").trim().toLowerCase();
- if(!q)return"Ask me a question about data saved in the BSMS.";
+ const raw=String(question||"").trim(),q=raw.toLowerCase();if(!q)return"Ask me a question about data saved in the BSMS.";
  const appts=loadAppointments(),completed=appts.filter(a=>a.status==="Completed"),clients=customerRecords(),walkins=loadQueue(WALKIN_KEY),roster=loadBarberRoster(),issues=loadKey(INSPECTION_ISSUES_KEY,[]),incidents=loadKey(INCIDENTS_KEY,[]),pos=loadKey(POS_TRANSACTIONS_KEY,[]),rent=loadKey(BOOTH_RENT_PAYMENTS_KEY,[]),reviews=loadReviews(),deposits=loadKey(DEPOSIT_PAYMENTS_KEY,[]),campaigns=loadKey(GROWTH_CAMPAIGNS_KEY,[]),attrs=loadKey(ATTRIBUTION_KEY,[]),diary=loadKey(OWNER_DIARY_KEY,[]),audits=loadKey(AUDIT_KEY,[]);
- const month=periodBounds("month",today()),monthCompleted=completed.filter(a=>new Date(a.startAt)>=month.start&&new Date(a.startAt)<=month.end);
- const barberNames=roster.map(r=>r.name);
- const namedBarber=barberNames.find(b=>q.includes(b.toLowerCase()));
- if(q.includes("attention")||q.includes("need my attention")||q.includes("requires my attention")){
-   const alerts=ownerDashboardAlerts();return alerts.length?alerts.map(a=>a.text).join(" • "):"There are no critical Owner alerts recorded right now."
- }
- if(q.includes("booth rent")&&(q.includes("owe")||q.includes("outstanding")||q.includes("due"))){
-   const due=barberNames.filter(b=>b!=="Tony").map(b=>boothRentSummary(b)).filter(s=>s.balance>0);return due.length?due.map(s=>`${s.barber}: ${money(s.balance)} (${s.status})`).join(" • "):"No outstanding booth rent is recorded for the current week."
- }
- if(q.includes("inspection")&&(q.includes("open")||q.includes("unresolved")||q.includes("issue"))){
-   const open=issues.filter(i=>i.status!=="Resolved");return open.length?open.map(i=>`${i.title}${i.responsible?` — ${i.responsible}`:""}`).join(" • "):"There are no unresolved inspection issues recorded."
- }
- if(q.includes("license")&&(q.includes("expire")||q.includes("expiration")||q.includes("soon"))){
-   const rows=roster.filter(r=>r.active&&r.licenseExpiration).map(r=>({r,w:licenseWarningLevel(r.licenseExpiration)})).filter(x=>x.w).sort((a,b)=>a.w.days-b.w.days);
-   return rows.length?rows.map(x=>`${x.r.name}: ${x.r.licenseExpiration} (${x.w.label})`).join(" • "):"No active barber license expiration warnings are recorded within 60 days."
- }
+ const barberNames=roster.map(r=>r.name),namedBarber=barberNames.find(b=>q.includes(b.toLowerCase()));
+ let bounds=null,timeLabel="all saved data";if(q.includes("today")){bounds=periodBounds("day",today());timeLabel="today"}else if(q.includes("this week")){bounds=periodBounds("week",today());timeLabel="this week"}else if(q.includes("this month")||q.includes("month")){bounds=periodBounds("month",today());timeLabel="this month"}else if(q.includes("this year")||q.includes("year")){bounds=periodBounds("year",today());timeLabel="this year"}
+ const inBounds=a=>!bounds||(new Date(a.startAt)>=bounds.start&&new Date(a.startAt)<=bounds.end),barberAppts=namedBarber?appts.filter(a=>a.barber===namedBarber&&inBounds(a)):appts.filter(inBounds);
+ if(q.includes("attention")||q.includes("need my attention")||q.includes("requires my attention")){const alerts=ownerDashboardAlerts();return alerts.length?alerts.map(a=>a.text).join(" • "):"There are no critical Owner alerts recorded right now."}
+ if(q.includes("booth rent")&&(q.includes("owe")||q.includes("outstanding")||q.includes("due"))){const due=barberNames.filter(b=>b!=="Tony").map(b=>boothRentSummary(b)).filter(s=>s.balance>0);return due.length?due.map(s=>`${s.barber}: ${money(s.balance)} (${s.status})`).join(" • "):"No outstanding booth rent is recorded for the current week."}
+ if(q.includes("inspection")&&(q.includes("open")||q.includes("unresolved")||q.includes("issue"))){const open=issues.filter(i=>i.status!=="Resolved");return open.length?open.map(i=>`${i.title}${i.responsible?` — ${i.responsible}`:""}`).join(" • "):"There are no unresolved inspection issues recorded."}
+ if(q.includes("license")&&(q.includes("expire")||q.includes("expiration")||q.includes("soon"))){const rows=roster.filter(r=>r.active&&r.licenseExpiration).map(r=>({r,w:licenseWarningLevel(r.licenseExpiration)})).filter(x=>x.w).sort((a,b)=>a.w.days-b.w.days);return rows.length?rows.map(x=>`${x.r.name}: ${x.r.licenseExpiration} (${x.w.label})`).join(" • "):"No active barber license expiration warnings are recorded within 60 days."}
  if(namedBarber&&q.includes("license")){const r=roster.find(x=>x.name===namedBarber);return r?.licenseNumber?`${r.name}'s recorded license number is ${r.licenseNumber}${r.licenseExpiration?`, expiring ${r.licenseExpiration}`:""}.`:`No license number is recorded for ${namedBarber}.`}
  if(namedBarber&&(q.includes("start date")||q.includes("started"))){const r=roster.find(x=>x.name===namedBarber);return r?.startDate?`${r.name}'s recorded start date is ${r.startDate}.`:`No start date is recorded for ${namedBarber}.`}
- if(q.includes("no-show")||q.includes("no show"))return`${appts.filter(a=>a.status==="No Show").length} no-show appointment(s) are recorded in the BSMS.`;
- if(q.includes("cancel"))return`${appts.filter(a=>a.status==="Cancelled").length} cancelled appointment(s) are recorded in the BSMS.`;
- if(q.includes("most revenue")||q.includes("highest revenue")){
-   const data=barberNames.map(b=>({b,total:monthCompleted.filter(a=>a.barber===b).reduce((s,a)=>s+customerTotalForAppointment(a),0)})).sort((a,b)=>b.total-a.total)[0];return data?`${data.b} has the highest completed appointment value this month at ${money(data.total)}.`:"There is no completed appointment revenue recorded this month."
+ if(q.includes("client")||q.includes("customer")){
+   const rows=namedBarber?clientsForBarber(namedBarber).filter(c=>c.appointments.some(a=>a.barber===namedBarber&&inBounds(a))):clients.filter(c=>c.appointments.some(inBounds));
+   const sorted=rows.slice().sort((a,b)=>`${a.lastName} ${a.firstName}`.localeCompare(`${b.lastName} ${b.firstName}`)),names=sorted.map(c=>`${c.firstName} ${c.lastName}`).filter(Boolean);
+   if(namedBarber)return`${namedBarber} has ${sorted.length} client(s) in ${timeLabel}${names.length?`: ${names.slice(0,20).join(", ")}${names.length>20?` … and ${names.length-20} more`:""}`:"."}`;
+   return`${sorted.length} unique client profile(s) match ${timeLabel}${names.length&&q.includes("list")?`: ${names.slice(0,20).join(", ")}`:"."}`
  }
- if(namedBarber&&q.includes("revenue")){const total=completed.filter(a=>a.barber===namedBarber).reduce((s,a)=>s+customerTotalForAppointment(a),0);return`${namedBarber} has ${money(total)} in recorded completed appointment value across the saved data.`}
- if(q.includes("popular service")||q.includes("most service")){const counts={};completed.forEach(a=>(a.serviceIds||[]).forEach(id=>counts[id]=(counts[id]||0)+1));const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?`${serviceById(top[0])?.name||top[0]} is the most frequently recorded completed service with ${top[1]} occurrence(s).`:"No completed service data is recorded."}
+ if(q.includes("last second")){const list=barberAppts.filter(a=>a.status==="Last Second Cancellation");return`${namedBarber?namedBarber+" has":"There are"} ${list.length} Last Second Cancellation appointment(s) in ${timeLabel}.`}
+ if(q.includes("no-show")||q.includes("no show")){const list=barberAppts.filter(a=>a.status==="No Show");return`${namedBarber?namedBarber+" has":"There are"} ${list.length} no-show appointment(s) in ${timeLabel}.`}
+ if(q.includes("cancel")){const regular=barberAppts.filter(a=>a.status==="Cancelled").length,last=barberAppts.filter(a=>a.status==="Last Second Cancellation").length;return`${namedBarber?namedBarber+" has":"There are"} ${regular} regular cancellation(s) and ${last} Last Second Cancellation(s) in ${timeLabel}.`}
+ if(namedBarber&&q.includes("revenue")){const total=barberAppts.filter(a=>a.status==="Completed").reduce((s,a)=>s+customerTotalForAppointment(a),0);return`${namedBarber} has ${money(total)} in recorded completed appointment value for ${timeLabel}.`}
+ if(q.includes("most revenue")||q.includes("highest revenue")){const data=barberNames.map(b=>({b,total:appts.filter(a=>a.barber===b&&a.status==="Completed"&&inBounds(a)).reduce((s,a)=>s+customerTotalForAppointment(a),0)})).sort((a,b)=>b.total-a.total)[0];return data?`${data.b} has the highest completed appointment value for ${timeLabel} at ${money(data.total)}.`:"There is no completed appointment revenue recorded."}
+ if(q.includes("review")){const list=namedBarber?reviews.filter(r=>r.barber===namedBarber):reviews;return`${namedBarber?namedBarber+" has":"There are"} ${list.length} verified review record(s) saved.`}
+ if(q.includes("service")&&namedBarber){const list=servicesForBarber(namedBarber);return`${namedBarber} currently offers ${list.length} service(s): ${list.map(s=>s.name).join(", ")||"none"}.`}
+ if(q.includes("appointment")){const list=barberAppts;const summary=`${list.filter(a=>a.status==="Completed").length} completed, ${list.filter(a=>a.status==="Scheduled").length} scheduled, ${list.filter(a=>a.status==="Cancelled").length} cancelled, ${list.filter(a=>a.status==="Last Second Cancellation").length} last-second cancellations, ${list.filter(a=>a.status==="No Show").length} no-show`;return`${namedBarber?namedBarber+" has":"There are"} ${list.length} saved appointment(s) for ${timeLabel}: ${summary}.`}
+ if(q.includes("popular service")||q.includes("most service")){const counts={};completed.filter(inBounds).forEach(a=>(a.serviceIds||[]).forEach(id=>counts[id]=(counts[id]||0)+1));const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];return top?`${serviceById(top[0])?.name||top[0]} is the most frequently recorded completed service for ${timeLabel} with ${top[1]} occurrence(s).`:"No completed service data is recorded."}
  if(q.includes("walk-in")||q.includes("walk in"))return`${walkins.length} walk-in record(s) are currently saved. ${walkins.filter(w=>w.status==="Completed").length} are marked Completed.`;
- if(q.includes("client")||q.includes("customer")){if(q.includes("how many")||q.includes("number"))return`${clients.length} unique client profile(s) can be derived from saved appointments.`}
  if(q.includes("deposit"))return`${deposits.length} deposit payment record(s) are saved, totaling ${money(deposits.reduce((s,d)=>s+Number(d.amount||0),0))}.`;
- if(q.includes("review"))return`${reviews.length} verified review record(s) are saved.`;
  if(q.includes("incident"))return`${incidents.length} incident report(s) are saved; ${incidents.filter(i=>i.status!=="Closed").length} are not closed.`;
  if(q.includes("campaign")||q.includes("marketing"))return`${campaigns.length} growth campaign(s) are saved and ${attrs.length} booking attribution record(s) are saved.`;
  if(q.includes("diary")||q.includes("notes about")){if(namedBarber){const n=diary.filter(d=>d.person===namedBarber).length;return`${n} Owner Diary record(s) are saved for ${namedBarber}.`}return`${diary.length} Owner Diary record(s) are saved.`}
  if(q.includes("audit"))return`${audits.length} audit-history record(s) are saved.`;
- if(q.includes("pos")||q.includes("sales")||q.includes("transactions"))return`${pos.length} POS transaction(s) are saved, with ${money(pos.reduce((s,t)=>s+Number(t.amountCollected||0),0))} recorded as amount collected.`;
- if(q.includes("appointment")){if(namedBarber){const list=appts.filter(a=>a.barber===namedBarber);return`${namedBarber} has ${list.length} saved appointment(s): ${list.filter(a=>a.status==="Completed").length} completed, ${list.filter(a=>a.status==="Scheduled").length} scheduled, ${list.filter(a=>a.status==="Cancelled").length} cancelled.`}return`${appts.length} appointment record(s) are saved: ${completed.length} completed, ${appts.filter(a=>a.status==="Scheduled").length} scheduled, ${appts.filter(a=>a.status==="Cancelled").length} cancelled, ${appts.filter(a=>a.status==="No Show").length} no-show.`}
- if(q.includes("what data")||q.includes("what can you answer")||q.includes("help"))return"I can query saved Owner-authorized data about appointments, clients, barbers and licenses, services, availability, walk-ins, deposits, POS/sales, booth rent, reviews, Owner Diary records, incidents, inspections, checklists, audit history, campaigns, referrals, attribution, and shop status. I do not expose private Barber ↔ Barber messages.";
+ if(q.includes("pos")||q.includes("sales")||q.includes("transactions")){const list=namedBarber?pos.filter(t=>t.barber===namedBarber):pos;return`${namedBarber?namedBarber+" has":"There are"} ${list.length} POS transaction(s) saved, with ${money(list.reduce((s,t)=>s+Number(t.amountCollected||0),0))} recorded as amount collected.`}
+ if(q.includes("what data")||q.includes("what can you answer")||q.includes("help"))return"I can query saved Owner-authorized data about appointments, clients, barbers and licenses, active services, availability, walk-ins, deposits, POS/sales, booth rent, reviews, Owner Diary records, incidents, inspections, checklists, audit history, campaigns, referrals, attribution, and shop status. I do not expose private Barber ↔ Barber messages.";
  return`I could not map that question confidently to a saved BSMS dataset. The system currently has ${appts.length} appointments, ${clients.length} derived clients, ${walkins.length} walk-ins, ${pos.length} POS transactions, ${issues.filter(i=>i.status!=="Resolved").length} open inspection issues, and ${roster.filter(r=>r.active).length} active roster records. Try naming the data you want, the barber, and the timeframe.`
 }
 function askAssistant(question){
@@ -712,7 +738,7 @@ function depositRequirement(barber,phone,email){
  const settings=loadDepositSettings()[barber]||{required:false,amount:0};
  const prior=latestPriorAppointmentForCustomer(phone,email);
  let amount=settings.required?Math.max(0,Number(settings.amount||0)):0,reason=settings.required?"Barber Requirement":"";
- if(prior&&["Cancelled","No Show"].includes(prior.status)){
+ if(prior&&["Cancelled","No Show","Last Second Cancellation"].includes(prior.status)){
    if(amount<1000)amount=1000;
    reason=reason?`${reason}; Prior ${prior.status}`:`Prior ${prior.status}`
  }
@@ -723,7 +749,9 @@ function updateBookingDepositNotice(){
  const req=depositRequirement(barber,$("#phone").value,$("#email").value);
  if(!req.required){box.classList.add("hidden");box.innerHTML="";return}
  box.classList.remove("hidden");
- const why=req.reason.includes("Prior")?` A deposit is required because the customer's most recent booking was ${req.prior.status.toLowerCase()}.`:"";
+ let why="";
+ if(req.prior?.status==="Last Second Cancellation")why=" A $10 minimum deposit is required because the previous appointment was cancelled too close to the scheduled service time to give the barber a reasonable opportunity to fill the vacated time with another client.";
+ else if(req.reason.includes("Prior"))why=` A deposit is required because the customer's most recent booking was ${req.prior.status.toLowerCase()}.`;
  box.innerHTML=`<strong>Non-Refundable Deposit Required: ${money(req.amount)}</strong><p>This deposit is required to secure the appointment and will be applied toward the appointment balance.${esc(why)}</p>`
 }
 function renderDepositSettings(){
@@ -782,7 +810,7 @@ function renderCustomerProfile(){
  if(lookupInput)lookupInput.value=formatPhone(c.phone)||c.email||"";
  lookupPanel?.classList.add("hidden");updateCustomerSessionUi();
  const storageKey=customerStorageKey(c),prefs=loadKey(PREFERENCES_KEY,{})[storageKey]||{},familyStore=loadKey(FAMILY_KEY,{}),family=familyStore[storageKey]||familyStore[c.email]||[],myReviews=loadReviews().filter(r=>c.appointments.some(a=>a.id===r.appointmentId));
- target.innerHTML=`<div class="profile-grid"><section class="profile-card"><p class="eyebrow">Customer</p><h2>${esc(c.firstName+" "+c.lastName)}</h2><p>${esc(formatPhone(c.phone)||"No phone")}${c.email?`<br>${esc(c.email)}`:""}</p><button class="button primary" id="bookPrimaryCustomer">Book Appointment</button>${shopLocationCard()}<div class="profile-row"><span>Total appointments</span><strong>${c.appointments.length}</strong></div></section><section class="profile-card"><h2>Saved preferences</h2><label>Preferred haircut / guard<textarea id="profileHairPreference">${esc(prefs.hair||"")}</textarea></label><label>Beard preference<textarea id="profileBeardPreference">${esc(prefs.beard||"")}</textarea></label><label>Sensitivities or notes<textarea id="profileSensitivity">${esc(prefs.sensitivity||"")}</textarea></label><button class="button primary" id="saveProfilePrefs">Save preferences</button></section><section class="profile-card full"><div class="section-heading-row"><h2>Family account</h2><button class="button secondary" id="addFamilyMember">Add member</button></div>${family.map((f,i)=>`<div class="family-book-row"><div><strong>${esc(f.name)}</strong><span class="help">${esc(f.relationship)}</span></div><button class="button secondary" data-family-book-index="${i}">Book an Appointment</button></div>`).join("")||'<p class="help">No family members added.</p>'}</section><section class="profile-card full"><h2>Reviews</h2>${completedUnreviewed(c).map(a=>`<div class="review-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong><label>Rating<select data-review-stars="${a.id}"><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label><label>Review<textarea data-review-text="${a.id}"></textarea></label><button class="button primary" data-submit-review="${a.id}">Submit Review</button></div>`).join("")||'<p class="help">Reviews can be left after a completed appointment.</p>'}${myReviews.map(r=>`<div class="review-card"><strong>★ ${r.stars} — ${esc(r.barber)}</strong><p>${esc(r.text)}</p>${r.response?`<div class="barber-response"><strong>${esc(r.barber)} — Barber Response</strong><p>${esc(r.response)}</p></div>`:""}</div>`).join("")}</section><section class="profile-card full"><h2>Appointment Messages</h2>${c.appointments.filter(a=>a.status!=="Cancelled").map(a=>`<div class="appointment-message-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong>${shopLocationCard()}<div class="appointment-thread">${appointmentMessages(a.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-client-message-input="${a.id}" placeholder="Message barber"><button class="button secondary" data-client-message-send="${a.id}">Send</button></div></div>`).join("")}</section><section class="profile-card full"><h2>Appointment history</h2>${c.appointments.sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)).map(a=>`<div class="profile-row"><span>${esc(formatDateTime(a.startAt))} — ${esc(a.barber)}</span><strong>${money(customerTotalForAppointment(a))}</strong></div>`).join("")}</section></div>`;
+ target.innerHTML=`<div class="profile-grid"><section class="profile-card"><p class="eyebrow">Customer</p><h2>${esc(c.firstName+" "+c.lastName)}</h2><p>${esc(formatPhone(c.phone)||"No phone")}${c.email?`<br>${esc(c.email)}`:""}</p><button class="button primary" id="bookPrimaryCustomer">Book Appointment</button>${shopLocationCard()}<div class="profile-row"><span>Total appointments</span><strong>${c.appointments.length}</strong></div></section><section class="profile-card"><h2>Saved preferences</h2><label>Preferred haircut / guard<textarea id="profileHairPreference">${esc(prefs.hair||"")}</textarea></label><label>Beard preference<textarea id="profileBeardPreference">${esc(prefs.beard||"")}</textarea></label><label>Sensitivities or notes<textarea id="profileSensitivity">${esc(prefs.sensitivity||"")}</textarea></label><button class="button primary" id="saveProfilePrefs">Save preferences</button></section><section class="profile-card full"><div class="section-heading-row"><h2>Family account</h2><button class="button secondary" id="addFamilyMember">Add member</button></div>${family.map((f,i)=>`<div class="family-book-row"><div><strong>${esc(f.name)}</strong><span class="help">${esc(f.relationship)}</span></div><button class="button secondary" data-family-book-index="${i}">Book an Appointment</button></div>`).join("")||'<p class="help">No family members added.</p>'}</section><section class="profile-card full"><h2>Reviews</h2>${completedUnreviewed(c).map(a=>`<div class="review-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong><label>Rating<select data-review-stars="${a.id}"><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label><label>Review<textarea data-review-text="${a.id}"></textarea></label><button class="button primary" data-submit-review="${a.id}">Submit Review</button></div>`).join("")||'<p class="help">Reviews can be left after a completed appointment.</p>'}${myReviews.map(r=>`<div class="review-card"><strong>★ ${r.stars} — ${esc(r.barber)}</strong><p>${esc(r.text)}</p>${r.response?`<div class="barber-response"><strong>${esc(r.barber)} — Barber Response</strong><p>${esc(r.response)}</p></div>`:""}</div>`).join("")}</section><section class="profile-card full"><h2>Appointment Messages</h2>${c.appointments.filter(a=>!["Cancelled","Last Second Cancellation"].includes(a.status)).map(a=>`<div class="appointment-message-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong>${shopLocationCard()}<div class="appointment-thread">${appointmentMessages(a.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-client-message-input="${a.id}" placeholder="Message barber"><button class="button secondary" data-client-message-send="${a.id}">Send</button></div></div>`).join("")}</section><section class="profile-card full"><h2>Appointment history</h2>${c.appointments.sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)).map(a=>`<div class="profile-row"><span>${esc(formatDateTime(a.startAt))} — ${esc(a.barber)}</span><strong>${money(customerTotalForAppointment(a))}</strong></div>`).join("")}</section></div>`;
  $("#saveProfilePrefs").onclick=()=>{const all=loadKey(PREFERENCES_KEY,{});all[storageKey]={hair:$("#profileHairPreference").value,beard:$("#profileBeardPreference").value,sensitivity:$("#profileSensitivity").value};saveKey(PREFERENCES_KEY,all);toast("Preferences saved.")};
  $("#addFamilyMember").onclick=()=>{const name=prompt("Family member name:");if(!name)return;const relationship=prompt("Relationship:","Child")||"Family",all=loadKey(FAMILY_KEY,{});all[storageKey]=all[storageKey]||[];all[storageKey].push({name,relationship});saveKey(FAMILY_KEY,all);renderCustomerProfile()};
  $("#bookPrimaryCustomer").onclick=()=>{showView("book");$("#firstName").value=c.firstName;$("#lastName").value=c.lastName;$("#phone").value=formatPhone(c.phone);$("#email").value=c.email||"";$("#notes").value="";updateBookingDepositNotice();updateBookingSummary()};
@@ -823,8 +851,8 @@ function barberEligibilityForWalkIn(barber,serviceIds,requestedAt=new Date()){
 }
 function createWalkInFromPrompts(defaultBarber=""){
  const name=prompt("Walk-in name (optional):","")||"Walk-in Customer",email=prompt("Email address (optional):","")||"",phone=prompt("Phone number (optional):","")||"";
- const serviceText=prompt(`Service IDs separated by commas:\n${SERVICES.map(s=>`${s.id} = ${s.name}`).join("\n")}`,"haircut")||"haircut";
- const serviceIds=serviceText.split(",").map(x=>x.trim()).filter(id=>SERVICES.some(s=>s.id===id));
+ const serviceText=prompt(`Service IDs separated by commas:\n${allServices().map(s=>`${s.id} = ${s.name}`).join("\n")}`,"haircut")||"haircut";
+ const serviceIds=serviceText.split(",").map(x=>x.trim()).filter(id=>allServices().some(s=>s.id===id));
  if(!serviceIds.length){toast("Select at least one valid service.");return null}
  let barber=defaultBarber,eligibility=null;
  if(barber){eligibility=barberEligibilityForWalkIn(barber,serviceIds,new Date());if(!eligibility.eligible){toast(`${barber} is not eligible: ${eligibility.reason}`);return null}}
@@ -922,26 +950,26 @@ function renderPos(){
 }
 function renderPosTransaction(){
  const barber=activeBarber(),source=posSourceRecord(),quick=source.type==="quick";$("#posCustomerFields").classList.toggle("hidden",!quick);
- const selected=source.record?.serviceIds||[];$("#posServiceList").innerHTML=servicesForBarber(barber).map(s=>`<label class="service-row"><input class="pos-service" type="checkbox" value="${s.id}" ${selected.includes(s.id)?"checked":""}><span class="service-copy"><strong>${esc(s.name)}</strong><small>${s.minutes} min</small></span><span class="service-price"><strong>${money(effectivePrice(barber,s.id))}</strong></span></label>`).join("");updatePosSummary()
+ const selected=source.record?.serviceIds||[],posServices=servicesForBarber(barber,true).filter(s=>serviceIsActiveForBarber(barber,s.id)||selected.includes(s.id));$("#posServiceList").innerHTML=posServices.map(s=>`<label class="service-row"><input class="pos-service" type="checkbox" value="${s.id}" ${selected.includes(s.id)?"checked":""}><span class="service-copy"><strong>${esc(s.name)}</strong><small>${s.minutes} min${!serviceIsActiveForBarber(barber,s.id)?" • currently inactive":""}</small></span><span class="service-price"><strong>${money(effectivePrice(barber,s.id))}</strong></span></label>`).join("");$("#posHairScalpFee").checked=Boolean(source.record?.hairScalpPreparationFee);updatePosSummary()
 }
 function posSelectedServices(){return $$(".pos-service:checked").map(x=>x.value)}
 function updatePosSummary(){
- const barber=activeBarber(),source=posSourceRecord(),ids=posSelectedServices(),services=ids.reduce((s,id)=>s+effectivePrice(barber,id),0),tip=Math.max(0,Math.round(Number($("#posTip").value||0)*100)),deposit=Number(source.record?.depositPaid||0),after=source.record?.afterHours?AFTER_HOURS_CUSTOMER_FEE:0,total=services+after+tip,balance=Math.max(0,total-deposit);
- $("#posSummary").innerHTML=`<div class="summary-list"><div class="summary-row"><span>Services</span><strong>${money(services)}</strong></div>${after?`<div class="summary-row"><span>After-hours fee</span><strong>${money(after)}</strong></div>`:""}${deposit?`<div class="summary-row"><span>Deposit already paid</span><strong>−${money(deposit)}</strong></div>`:""}<div class="summary-row"><span>Tip</span><strong>${money(tip)}</strong></div></div><div class="summary-total"><span>Amount to collect</span><strong>${money(balance)}</strong></div>`
+ const barber=activeBarber(),source=posSourceRecord(),ids=posSelectedServices(),services=ids.reduce((s,id)=>s+effectivePrice(barber,id),0),tip=Math.max(0,Math.round(Number($("#posTip").value||0)*100)),deposit=Number(source.record?.depositPaid||0),after=source.record?.afterHours?AFTER_HOURS_CUSTOMER_FEE:0,prep=$("#posHairScalpFee")?.checked?HAIR_SCALP_PREPARATION_FEE:0,total=services+after+prep+tip,balance=Math.max(0,total-deposit);
+ $("#posSummary").innerHTML=`<div class="summary-list"><div class="summary-row"><span>Services</span><strong>${money(services)}</strong></div>${after?`<div class="summary-row"><span>After-hours fee</span><strong>${money(after)}</strong></div>`:""}${prep?`<div class="summary-row"><span>Hair &amp; Scalp Preparation Fee</span><strong>${money(prep)}</strong></div>`:""}${deposit?`<div class="summary-row"><span>Deposit already paid</span><strong>−${money(deposit)}</strong></div>`:""}<div class="summary-row"><span>Tip</span><strong>${money(tip)}</strong></div></div><div class="summary-total"><span>Amount to collect</span><strong>${money(balance)}</strong></div>`
 }
 function completePosTransaction(){
  const barber=activeBarber(),source=posSourceRecord(),ids=posSelectedServices();if(!ids.length){toast("Select at least one service.");return}
- const quick=source.type==="quick",name=quick?($("#posQuickName").value.trim()||"Quick Sale Customer"):`${source.record.firstName||source.record.name||"Customer"} ${source.record.lastName||""}`.trim(),phone=quick?formatPhone($("#posQuickPhone").value):(source.record.phone||""),tip=Math.max(0,Math.round(Number($("#posTip").value||0)*100)),serviceTotal=ids.reduce((s,id)=>s+effectivePrice(barber,id),0),after=source.record?.afterHours?AFTER_HOURS_CUSTOMER_FEE:0,deposit=Number(source.record?.depositPaid||0),gross=serviceTotal+after+tip,balance=Math.max(0,gross-deposit),method=$("#posPaymentMethod").value;
- const tx={id:`pos-${Date.now()}`,barber,sourceType:source.type,sourceId:source.record?.id||null,customer:name,phone,serviceIds:ids,serviceTotal,afterHoursFee:after,depositApplied:deposit,tip,amountCollected:balance,grossTotal:gross,method,createdAt:new Date().toISOString(),status:"Completed"};const txs=loadKey(POS_TRANSACTIONS_KEY,[]);txs.push(tx);saveKey(POS_TRANSACTIONS_KEY,txs);
- if(source.type==="appointment"){const items=loadAppointments(),a=items.find(x=>x.id===source.record.id);if(a){a.status="Completed";a.serviceIds=ids;a.posTransactionId=tx.id;a.tip=tip;a.paymentMethod=method;a.balanceDue=0}saveAppointments(items)}
+ const quick=source.type==="quick",name=quick?($("#posQuickName").value.trim()||"Quick Sale Customer"):`${source.record.firstName||source.record.name||"Customer"} ${source.record.lastName||""}`.trim(),phone=quick?formatPhone($("#posQuickPhone").value):(source.record.phone||""),tip=Math.max(0,Math.round(Number($("#posTip").value||0)*100)),serviceTotal=ids.reduce((s,id)=>s+effectivePrice(barber,id),0),after=source.record?.afterHours?AFTER_HOURS_CUSTOMER_FEE:0,prep=$("#posHairScalpFee")?.checked?HAIR_SCALP_PREPARATION_FEE:0,deposit=Number(source.record?.depositPaid||0),gross=serviceTotal+after+prep+tip,balance=Math.max(0,gross-deposit),method=$("#posPaymentMethod").value;
+ const tx={id:`pos-${Date.now()}`,barber,sourceType:source.type,sourceId:source.record?.id||null,customer:name,phone,serviceIds:ids,serviceTotal,afterHoursFee:after,hairScalpPreparationFee:prep,depositApplied:deposit,tip,amountCollected:balance,grossTotal:gross,method,createdAt:new Date().toISOString(),status:"Completed"};const txs=loadKey(POS_TRANSACTIONS_KEY,[]);txs.push(tx);saveKey(POS_TRANSACTIONS_KEY,txs);
+ if(source.type==="appointment"){const items=loadAppointments(),a=items.find(x=>x.id===source.record.id);if(a){a.status="Completed";a.serviceIds=ids;a.posTransactionId=tx.id;a.tip=tip;a.paymentMethod=method;a.hairScalpPreparationFee=prep;a.customerTotal=serviceTotal+after+prep;a.balanceDue=0}saveAppointments(items)}
  if(source.type==="walkin"){const items=loadQueue(WALKIN_KEY),w=items.find(x=>x.id===source.record.id);if(w){w.status="Completed";w.serviceIds=ids;w.posTransactionId=tx.id;w.tip=tip;w.paymentMethod=method}saveQueue(WALKIN_KEY,items)}
- $("#posTip").value="0";$("#posQuickName").value="";$("#posQuickPhone").value="";renderPos();toast("Sale completed.")
+ $("#posTip").value="0";$("#posHairScalpFee").checked=false;$("#posQuickName").value="";$("#posQuickPhone").value="";renderPos();toast("Sale completed.")
 }
 function renderRecentPos(){const barber=activeBarber(),items=loadKey(POS_TRANSACTIONS_KEY,[]).filter(t=>t.barber===barber).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,12);$("#posRecentTransactions").innerHTML=items.length?items.map(t=>`<div class="queue-item"><div><strong>${esc(t.customer)} — ${money(t.amountCollected)}</strong><span class="help">${esc(t.method)} • Tip ${money(t.tip)} • ${esc(formatDateTime(t.createdAt))}</span></div><button class="button secondary" type="button" data-pos-receipt="${t.id}">Receipt</button></div>`).join(""):'<p class="help">No POS transactions yet.</p>'}
 
 
 function renderBarberReviews(){const b=activeBarber(),r=reviewsForBarber(b);$("#barberReviewsList").innerHTML=r.map(x=>`<article class="performance-card"><strong>★ ${x.stars}</strong><p>${esc(x.text)}</p>${x.response?`<div class="barber-response"><strong>${esc(b)} — Barber Response</strong><p>${esc(x.response)}</p></div>`:`<textarea data-review-response="${x.id}" placeholder="Write a response"></textarea><button class="button primary" data-review-respond="${x.id}">Respond</button>`}</article>`).join("")||'<section class="panel"><p>No reviews yet.</p></section>'}
-function renderBarberClientMessages(){const b=activeBarber(),a=loadAppointments().filter(x=>x.barber===b&&x.status!=="Cancelled");$("#barberClientMessagesList").innerHTML=a.map(x=>`<article class="performance-card"><strong>${esc(x.firstName+" "+x.lastName)} • ${esc(formatDateTime(x.startAt))}</strong><div class="appointment-thread">${appointmentMessages(x.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-bcm-input="${x.id}" placeholder="Message client"><button class="button secondary" data-bcm-send="${x.id}">Send</button></div></article>`).join("")||'<section class="panel"><p>No appointment conversations yet.</p></section>'}
+function renderBarberClientMessages(){const b=activeBarber(),a=loadAppointments().filter(x=>x.barber===b&&!["Cancelled","Last Second Cancellation"].includes(x.status));$("#barberClientMessagesList").innerHTML=a.map(x=>`<article class="performance-card"><strong>${esc(x.firstName+" "+x.lastName)} • ${esc(formatDateTime(x.startAt))}</strong><div class="appointment-thread">${appointmentMessages(x.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-bcm-input="${x.id}" placeholder="Message client"><button class="button secondary" data-bcm-send="${x.id}">Send</button></div></article>`).join("")||'<section class="panel"><p>No appointment conversations yet.</p></section>'}
 
 function clientsForBarber(barber){return customerRecords().filter(c=>c.appointments.some(a=>a.barber===barber))}
 function renderClientTools(){
@@ -1273,7 +1301,7 @@ let ownerViewHistory=[];
 let customerViewHistory=[];
 function currentViewName(){const v=$$(".view").find(x=>!x.classList.contains("hidden"));return v?.id?.replace(/^view-/,"")||""}
 function ownerGoBack(){const workspace=ownerWorkspace();while(ownerViewHistory.length){const item=ownerViewHistory.pop();if(item.workspace===workspace&&item.view){showView(item.view,true,true);return}}showView(workspace==="tony"?"barber-dashboard":"owner-dashboard",true,true)}
-function customerGoBack(){const prev=customerViewHistory.pop();if(prev){showView(prev,false,true);return}location.href="APP_LAUNCHER.html"}
+function customerGoBack(){const prev=customerViewHistory.pop();if(prev){showView(prev,false,true);return}location.href="CLIENT_LAUNCHER.html"}
 function showView(name,preserveOwnerContext=false,skipHistory=false){
  const mode=appMode(),ownerContext=isOwnerAppContext(),previous=currentViewName(),target=$("#view-"+name);if(!target)return;
  if(!skipHistory&&previous&&previous!==name){if(ownerContext&&ownerWorkspace()!=="home")ownerViewHistory.push({view:previous,workspace:ownerWorkspace()});else if(mode==="customer")customerViewHistory.push(previous)}
@@ -1330,7 +1358,7 @@ function renderGrowth(){
  const grouped={};attrs.forEach(a=>grouped[a.source]=(grouped[a.source]||0)+1);$("#attributionSummary").innerHTML=Object.entries(grouped).length?Object.entries(grouped).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="queue-item"><div><strong>${esc(k)}</strong><span>${v} booking${v===1?"":"s"}</span></div></div>`).join(""):'<p class="help">No attribution data yet.</p>';
  if($("#growthCampaignStart")&&!$("#growthCampaignStart").value)$("#growthCampaignStart").value=today()
 }
-function renderBusinessReports(){const a=loadAppointments(),pos=loadKey(POS_TRANSACTIONS_KEY,[]),walk=loadQueue(WALKIN_KEY),completed=a.filter(x=>x.status==="Completed"),cancelled=a.filter(x=>x.status==="Cancelled"),noshow=a.filter(x=>x.status==="No Show"),rev=pos.reduce((s,t)=>s+Number(t.amountCollected||0)+Number(t.depositApplied||0),0);$("#businessReportCards").innerHTML=[["Completed",completed.length],["Cancelled",cancelled.length],["No Shows",noshow.length],["POS Revenue",money(rev)]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#businessReportHighlights").innerHTML=[`Appointments: ${a.length}`,`Walk-ins: ${walk.length}`,`POS transactions: ${pos.length}`,`Deposits: ${loadKey(DEPOSIT_PAYMENTS_KEY,[]).length}`].map(x=>`<div class="queue-item"><div><strong>${esc(x)}</strong></div></div>`).join("")}
+function renderBusinessReports(){const a=loadAppointments(),pos=loadKey(POS_TRANSACTIONS_KEY,[]),walk=loadQueue(WALKIN_KEY),completed=a.filter(x=>x.status==="Completed"),cancelled=a.filter(x=>x.status==="Cancelled"),lastSecond=a.filter(x=>x.status==="Last Second Cancellation"),noshow=a.filter(x=>x.status==="No Show"),rev=pos.reduce((s,t)=>s+Number(t.amountCollected||0)+Number(t.depositApplied||0),0);$("#businessReportCards").innerHTML=[["Completed",completed.length],["Cancelled",cancelled.length],["Last Second Cancellations",lastSecond.length],["No Shows",noshow.length],["POS Revenue",money(rev)]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#businessReportHighlights").innerHTML=[`Appointments: ${a.length}`,`Walk-ins: ${walk.length}`,`POS transactions: ${pos.length}`,`Deposits: ${loadKey(DEPOSIT_PAYMENTS_KEY,[]).length}`].map(x=>`<div class="queue-item"><div><strong>${esc(x)}</strong></div></div>`).join("")}
 
 function renderPayments(){const date=$("#paymentDate").value,barber=$("#paymentBarber").value;let items=loadAppointments().filter(a=>a.status==="Completed"&&(!date||a.startAt.startsWith(date))&&(!barber||a.barber===barber));const payments=loadKey(PAYMENTS_KEY,{});const totals=items.reduce((sum,a)=>sum+customerTotalForAppointment(a),0),tips=items.reduce((sum,a)=>sum+Number(payments[a.id]?.tip||0),0);$("#paymentCards").innerHTML=[["Transactions",items.length],["Service revenue",money(totals)],["Tips",money(tips)],["Total collected",money(totals+tips)]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#paymentList").innerHTML=items.length?items.map(a=>{const pay=payments[a.id]||{method:"Card",tip:0};return`<article class="appointment-card"><div class="date-badge"><small>Paid</small><strong>$</strong></div><div class="appointment-main"><h3>${esc(a.firstName+" "+a.lastName)}</h3><p>${esc(serviceNames(a.serviceIds))} with ${esc(a.barber)}</p><p class="help">${esc(pay.method)} • Receipt ${a.id.slice(-6)}</p></div><div class="appointment-side"><label>Tip<input data-tip-id="${a.id}" type="number" min="0" step="1" value="${(pay.tip/100).toFixed(2)}"></label><strong>${money(customerTotalForAppointment(a)+pay.tip)}</strong><button class="button secondary" data-receipt-id="${a.id}">Receipt</button></div></article>`}).join(""):'<section class="panel"><h2>No completed transactions</h2></section>'}
 function renderCurrentView(name){
@@ -1366,15 +1394,16 @@ function renderCurrentView(name){
  if(name==="owner-booth-rent")renderOwnerBoothRent();
  if(name==="owner-payments")renderPayments();
  if(name==="owner-messages")renderOwnerMessages();
- if(name==="book")prefillSignedInCustomerBooking();
+ if(name==="book"){prefillSignedInCustomerBooking();ensureHairScalpPolicyForBooking();}
  if(name==="customer-profile")renderCustomerProfile();
  if(name==="customer-loyalty")renderLoyalty();
  if(name==="customer-gifts"){}
  if(name==="barber-dashboard")renderBarberDashboard();
  if(name==="barber-walkins")renderBarberWalkIns();
- if(name==="barber-appointments")renderIndividualAppointments();
+ if(name==="barber-appointments"){renderIndividualAppointments();if(activeBarber()){markCategorySeen(activeBarber(),"appointments");updateUnifiedNotifications();}}
  if(name==="barber-calendar")renderBarberCalendar();
  if(name==="barber-clientele")renderClientele();
+ if(name==="barber-services")renderBarberServices();
  if(name==="barber-prices")renderBarberPricing();
  if(name==="barber-deposits")renderDepositSettings();
  if(name==="barber-revenue")renderBarberRevenue();
@@ -1427,7 +1456,7 @@ function openTonyBarberWorkspace(){ownerViewHistory=[];sessionStorage.setItem("i
 function init(){
  $("#customerBackButton")?.addEventListener("click",customerGoBack);
  const launcherPhone=localStorage.getItem("icuLauncherPhone");if(launcherPhone){setCustomerSession(launcherPhone);if($("#customerProfileEmail"))$("#customerProfileEmail").value=launcherPhone;localStorage.removeItem("icuLauncherPhone");setTimeout(renderCustomerProfile,0)}const newClientPhone=localStorage.getItem("icuNewClientPhone");if(newClientPhone&&$("#phone")){$("#phone").value=formatPhone(newClientPhone);localStorage.removeItem("icuNewClientPhone")}updateCustomerSessionUi()
- const more=$("#barberMoreButton"),bn=$("#barberNav");if(more)more.onclick=()=>{const open=bn.classList.toggle("mobile-more-open");more.setAttribute("aria-expanded",String(open));};bn?.addEventListener("click",e=>{if(e.target.closest("[data-view-link]")){bn.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false");}});
+ const more=$("#barberMoreButton"),bn=$("#barberNav");if(more)more.onclick=()=>{const open=bn.classList.toggle("mobile-more-open");more.setAttribute("aria-expanded",String(open));};bn?.addEventListener("click",e=>{if(e.target.closest("[data-view-link]")){bn.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false");}});const ownerMore=$("#ownerMoreButton"),on=$("#ownerNav");if(ownerMore)ownerMore.onclick=()=>{const open=on.classList.toggle("owner-mobile-more-open");ownerMore.setAttribute("aria-expanded",String(open));};on?.addEventListener("click",e=>{if(e.target.closest("[data-view-link]")){on.classList.remove("owner-mobile-more-open");ownerMore?.setAttribute("aria-expanded","false");}});
  populateBarberSelects();renderCustomerServices();
  const todayValue=today();
  $("#date").min=todayValue;$("#date").value=todayValue;$("#barberWalkinDate").value=todayValue;$("#ownerAppointmentDate").value=todayValue;$("#individualDate").value=todayValue;$("#calendarDate").value=todayValue;$("#ownerRevenueDate").value=todayValue;$("#barberRevenueDate").value=todayValue;$("#ownerAnalyticsDate").value=todayValue;$("#barberAnalyticsDate").value=todayValue;$("#performanceDate").value=todayValue;$("#financialDate").value=todayValue;updateBookingSummary();
@@ -1435,7 +1464,7 @@ function init(){
  $("#reviewButton").addEventListener("click",reviewBooking);$("#editButton").addEventListener("click",()=>$("#reviewPanel").classList.add("hidden"));$("#confirmButton").addEventListener("click",confirmBooking);$("#newBookingButton").addEventListener("click",resetBookingForm);
  $("#brandHome").addEventListener("click",event=>{event.preventDefault();if(isOwnerAppContext())openOwnerHome();else if(appMode()==="individual")showView("barber-dashboard",false,true);else showView("book",false,true)});$("#menuButton").addEventListener("click",()=>{const nav=appMode()==="owner"?$("#ownerNav"):appMode()==="individual"?$("#barberNav"):$("#customerNav");const open=nav.classList.toggle("open");$("#menuButton").setAttribute("aria-expanded",String(open))});
  ["ownerAppointmentBarber","ownerAppointmentDate","ownerAppointmentStatus"].forEach(id=>$("#"+id).addEventListener("change",renderOwnerAppointments));$("#exportButton").addEventListener("click",exportCsv);
- $("#ownerPricingBarber").addEventListener("change",renderOwnerPricing);$("#ownerSavePricing").addEventListener("click",saveOwnerPricing);$("#barberSavePrices").addEventListener("click",saveBarberPricing);
+ $("#ownerPricingBarber").addEventListener("change",renderOwnerPricing);$("#ownerSavePricing").addEventListener("click",saveOwnerPricing);$("#barberSavePrices").addEventListener("click",saveBarberPricing);$("#addBarberService")?.addEventListener("click",addCustomBarberService);$("#barberServicesList")?.addEventListener("change",e=>{const t=e.target.closest("[data-barber-service-toggle]");if(t)setBarberServiceActive(t.dataset.barberServiceToggle,t.checked)});
  ["ownerRevenueBarber","ownerRevenueRange","ownerRevenueDate"].forEach(id=>$("#"+id).addEventListener("change",renderOwnerRevenue));["barberRevenueRange","barberRevenueDate"].forEach(id=>$("#"+id).addEventListener("change",renderBarberRevenue));
  ["ownerAnalyticsBarber","ownerAnalyticsDate"].forEach(id=>$("#"+id).addEventListener("change",renderOwnerAnalytics));$("#barberAnalyticsDate").addEventListener("change",renderBarberAnalytics);
  ["individualDate","individualStatus"].forEach(id=>$("#"+id).addEventListener("change",renderIndividualAppointments));$("#clienteleSearch").addEventListener("input",renderClientele);$("#calendarDate").addEventListener("change",renderBarberCalendar);$("#calendarPreviousDay").addEventListener("click",()=>shiftCalendar(-1));$("#calendarToday").addEventListener("click",()=>{$("#calendarDate").value=today();renderBarberCalendar()});$("#calendarNextDay").addEventListener("click",()=>shiftCalendar(1));
@@ -1452,7 +1481,7 @@ function init(){
  $("#addLocationButton").addEventListener("click",()=>{const name=prompt("Future location name:");if(!name)return;const items=loadLocations();items.push({id:`location-${Date.now()}`,name,status:"Future",revenue:0,customers:0,barbers:0});saveLocations(items);renderLocations()});
  $("#assistantAskButton").addEventListener("click",()=>askAssistant($("#assistantQuestion").value));$("#assistantQuestion").addEventListener("keydown",event=>{if(event.key==="Enter")askAssistant($("#assistantQuestion").value)});$$("[data-question]").forEach(button=>button.addEventListener("click",()=>askAssistant(button.dataset.question)));
  $("#customerProfileEmail").value="";$("#loyaltyEmail").value="";$("#paymentDate").value=today();BARBERS.forEach(b=>$("#paymentBarber").append(new Option(b,b)));
- $("#loadCustomerProfile").addEventListener("click",renderCustomerProfile);$("#customerProfileEmail").addEventListener("input",e=>{if(/^\D*\d/.test(e.target.value)&&!e.target.value.includes("@"))applyPhoneMask(e.target)});$("#loadLoyalty").addEventListener("click",renderLoyalty);$("#customerSignOutButton")?.addEventListener("click",()=>{clearCustomerSession();location.href="APP_LAUNCHER.html"});$("#customerExitButton")?.addEventListener("click",()=>clearCustomerSession());$("#createGiftCard").addEventListener("click",createGiftCard);$("#checkGiftCard").addEventListener("click",checkGiftCard);
+ $("#loadCustomerProfile").addEventListener("click",renderCustomerProfile);$("#customerProfileEmail").addEventListener("input",e=>{if(/^\D*\d/.test(e.target.value)&&!e.target.value.includes("@"))applyPhoneMask(e.target)});$("#loadLoyalty").addEventListener("click",renderLoyalty);$("#customerSignOutButton")?.addEventListener("click",()=>{clearCustomerSession();location.href="CLIENT_LAUNCHER.html"});$("#customerExitButton")?.addEventListener("click",()=>clearCustomerSession());$("#createGiftCard").addEventListener("click",createGiftCard);$("#checkGiftCard").addEventListener("click",checkGiftCard);
  ["ownerCustomerSearch","ownerCustomerSegment"].forEach(id=>$("#"+id).addEventListener(id==="ownerCustomerSearch"?"input":"change",renderOwnerCustomers));
  $("#addWalkin").addEventListener("click",()=>{const item=createWalkInFromPrompts("");if(!item)return;const items=loadQueue(WALKIN_KEY);items.push(item);saveQueue(WALKIN_KEY,items);renderOperations();updateUnifiedNotifications()});
  $("#barberAddWalkin").addEventListener("click",()=>{const item=createWalkInFromPrompts(activeBarber());if(!item)return;const items=loadQueue(WALKIN_KEY);items.push(item);saveQueue(WALKIN_KEY,items);renderBarberWalkIns();updateUnifiedNotifications()});
@@ -1481,7 +1510,7 @@ function init(){
  $("#payBoothRent").addEventListener("click",()=>{const barber=activeBarber(),amount=Math.max(0,Math.round(Number($("#boothRentPayAmount").value||0)*100));if(!amount){toast("Enter a payment amount.");return}recordBoothRentPayment(barber,amount,$("#boothRentPayMethod").value,"Barber App");renderBarberBoothRent();toast("Prototype booth-rent payment recorded.")});
  document.addEventListener("click",e=>{const b=e.target.closest("[data-owner-rent-record]");if(!b)return;const barber=b.dataset.ownerRentRecord,summary=boothRentSummary(barber),amount=Math.max(0,Math.round(Number(prompt(`Amount received from ${barber}:`,(summary.balance/100).toFixed(2))||0)*100));if(!amount)return;const method=prompt("Payment method (Cash, Zelle, Cash App, Venmo, Bank Transfer, Other):","Cash")||"Cash",note=prompt("Optional note/reference:","")||"";recordBoothRentPayment(barber,amount,method,"Owner",note);renderOwnerBoothRent();toast("Outside payment recorded by Owner.")});
 
- $("#posSource").addEventListener("change",renderPosTransaction);$("#posTip").addEventListener("input",updatePosSummary);$("#posServiceList").addEventListener("change",updatePosSummary);$("#posQuickPhone").addEventListener("input",e=>applyPhoneMask(e.target));$("#completePosSale").addEventListener("click",completePosTransaction);
+ $("#posSource").addEventListener("change",renderPosTransaction);$("#posTip").addEventListener("input",updatePosSummary);$("#posHairScalpFee")?.addEventListener("change",updatePosSummary);$("#posServiceList").addEventListener("change",updatePosSummary);$("#posQuickPhone").addEventListener("input",e=>applyPhoneMask(e.target));$("#completePosSale").addEventListener("click",completePosTransaction);
  document.addEventListener("click",e=>{const b=e.target.closest("[data-pos-receipt]");if(!b)return;const t=loadKey(POS_TRANSACTIONS_KEY,[]).find(x=>x.id===b.dataset.posReceipt);if(t)alert(`ICU Lookin Barber Studio\\nReceipt ${t.id.slice(-8)}\\n${t.customer}\\n${serviceNames(t.serviceIds)}\\nCollected: ${money(t.amountCollected)}\\nTip: ${money(t.tip)}\\nMethod: ${t.method}`)});
 
  $("#socialCaptureInput").addEventListener("change",async e=>{if(e.target.files?.length)await saveSocialFiles(e.target.files);e.target.value=""});$("#socialUploadInput").addEventListener("change",async e=>{if(e.target.files?.length)await saveSocialFiles(e.target.files);e.target.value=""});["socialPlatformFilter","socialTypeFilter"].forEach(id=>$("#"+id).addEventListener("change",renderSocialMedia));
@@ -1509,6 +1538,7 @@ function init(){
  $("#barberPreviewCampaign").addEventListener("click",()=>{const clients=barberMarketingClients();$("#barberCampaignPreview").classList.remove("hidden");$("#barberCampaignPreview").innerHTML=`<strong>${esc($("#barberCampaignName").value)} — ${clients.length} recipients</strong><p>${esc($("#barberCampaignMessage").value)} ${esc($("#barberCampaignOffer").value)}</p>`});
  window.addEventListener("icuMessagesChanged",()=>{updateUnifiedNotifications();if(appMode()==="individual"&&!$("#view-barber-messages").classList.contains("hidden"))renderBarberMessages();if(appMode()==="owner"&&!$("#view-owner-messages").classList.contains("hidden"))renderOwnerMessages()});
  window.addEventListener("storage",e=>{if([APPOINTMENTS_KEY,WALKIN_KEY,MESSAGES_KEY,MESSAGE_GROUPS_KEY,MESSAGE_READ_KEY].includes(e.key))updateUnifiedNotifications()});
+ $("#agreeHairScalpPolicy")?.addEventListener("click",agreeHairScalpPolicy);$("#barberSignOutButton")?.addEventListener("click",()=>{if(appMode()==="owner"){location.href="OWNER_LAUNCHER.html";return}const b=activeBarber();if(!b)return;sessionStorage.removeItem(`icuBarberAuth:${b}`);localStorage.removeItem(`icuBarberRemembered:${b}`);location.href="BARBER_LAUNCHER.html"});
  configureMode();
 }
 document.addEventListener("input",e=>{if(e.target.matches('input[type="tel"]'))applyPhoneMask(e.target)});
@@ -1676,7 +1706,7 @@ document.addEventListener("click",event=>{
   const link=event.target.closest("[data-view-link]");if(!link)return;
   // v0.22.2: this handler runs in the capture phase and stops propagation,
   // so close the mobile More panel here before routing the selected page.
-  if(link.closest("#barberNav")){const bn=document.getElementById("barberNav"),more=document.getElementById("barberMoreButton");bn?.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false")}
+  if(link.closest("#barberNav")){const bn=document.getElementById("barberNav"),more=document.getElementById("barberMoreButton");bn?.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false")}if(link.closest("#ownerNav")){const on=document.getElementById("ownerNav"),om=document.getElementById("ownerMoreButton");on?.classList.remove("owner-mobile-more-open");om?.setAttribute("aria-expanded","false")}
   event.preventDefault();event.stopImmediatePropagation();const view=link.dataset.viewLink;
   if(isOwnerAppContext()){
     if(link.closest("#ownerNav")){if(ownerWorkspace()!=="management"){ownerViewHistory=[];setOwnerWorkspace("management")}showView(view,true);return}
@@ -1692,4 +1722,4 @@ document.addEventListener("click",event=>{
  const clientele=event.target.closest("[data-clientele-key]");if(clientele){window.__icuSelectedClienteleKey=clientele.dataset.clienteleKey;renderSelectedClientele();return}
 });
 
-window.ICU_BSMS_VERSION="0.22.2-mobile-nav-hotfix";
+window.ICU_BSMS_VERSION="0.23-test-hub-services-auth-policy-validated";

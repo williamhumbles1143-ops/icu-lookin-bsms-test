@@ -444,3 +444,41 @@ html:not([data-app-mode="customer"]) #customerNavigationBar,body[data-app-mode="
   body[data-app-mode="individual"] #barberNav.mobile-more-open a:not(.mobile-primary),
   body[data-app-mode="owner"][data-owner-workspace="tony"] #barberNav.mobile-more-open a:not(.mobile-primary){order:0!important;grid-column:1!important}
 }
+
+
+/* ============================================================
+   v0.23 — OWNER MOBILE NAV / MY SERVICES / REQUIRED POLICY
+   ============================================================ */
+.owner-more-button{display:none}.owner-exit-link{color:#ffd8d8!important;border:1px solid rgba(255,255,255,.32)}
+.barber-signout-button{display:none}.service-management-list{display:grid;gap:.65rem}.service-management-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.8rem;align-items:center;padding:.85rem;border:1px solid var(--line);border-radius:12px;background:#fff}.service-management-row>span{display:grid;gap:.2rem;min-width:0}.service-management-row small{color:var(--muted)}.service-management-row em{font-style:normal;font-size:.78rem;font-weight:900;color:var(--muted)}.fee-toggle{display:flex;gap:.7rem;align-items:flex-start;padding:.9rem;margin:.8rem 0;border:1px solid var(--line);border-radius:12px;background:#faf8f3}.fee-toggle span{display:grid;gap:.25rem}.fee-toggle small{color:var(--muted)}
+.required-policy-dialog{width:min(92vw,620px);border:0;border-radius:18px;padding:0;box-shadow:0 24px 80px rgba(0,0,0,.4)}.required-policy-dialog::backdrop{background:rgba(0,0,0,.72)}.required-policy-shell{padding:1.4rem;display:grid;gap:.8rem}.required-policy-shell h2,.required-policy-shell p{margin:0}.required-policy-actions{display:grid;grid-template-columns:1fr;gap:.65rem;margin-top:.4rem}.required-policy-actions .button{text-align:center}
+@media(max-width:700px){
+ body[data-app-mode="owner"][data-owner-workspace="management"]{padding-bottom:74px}
+ body[data-app-mode="owner"][data-owner-workspace="management"] .topbar{position:sticky;top:0;display:flex!important;width:100%;max-width:100vw;min-width:0;padding:.55rem .7rem;gap:.55rem;justify-content:flex-start;overflow:visible}
+ body[data-app-mode="owner"][data-owner-workspace="management"] .brand{min-width:0;max-width:calc(100vw - 1.4rem)}
+ body[data-app-mode="owner"][data-owner-workspace="management"] .brand-logo{width:44px;height:44px;flex:0 0 44px}
+ body[data-app-mode="owner"][data-owner-workspace="management"] .brand-copy strong{font-size:.9rem;line-height:1.05}
+ body[data-app-mode="owner"][data-owner-workspace="management"] .brand-copy small{font-size:.58rem}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #menuButton{display:none!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:100vw!important;max-width:100vw!important;padding:.45rem max(.35rem,env(safe-area-inset-right)) calc(.45rem + env(safe-area-inset-bottom)) max(.35rem,env(safe-area-inset-left))!important;background:#080808!important;z-index:205!important;box-shadow:0 -5px 22px rgba(0,0,0,.25);gap:.25rem!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav a{display:none!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav a.owner-mobile-primary{display:flex!important;align-items:center;justify-content:center;min-width:0!important;min-height:50px;padding:.55rem .15rem!important;font-size:.78rem!important;text-align:center;white-space:nowrap}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav .owner-mobile-appts{font-size:0!important}body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav .owner-mobile-appts::before{content:"Appts";font-size:.78rem!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav .owner-mobile-ops{font-size:0!important}body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav .owner-mobile-ops::before{content:"Ops";font-size:.78rem!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerMoreButton{display:block!important;grid-column:4!important;grid-row:1!important;min-width:0;min-height:50px;padding:.55rem .15rem;border:0;border-radius:8px;background:transparent;color:#fff;font-size:.78rem;font-weight:900}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav.owner-mobile-more-open{grid-template-columns:1fr!important;max-height:calc(100dvh - env(safe-area-inset-top) - 12px)!important;overflow-y:auto;overscroll-behavior:contain;padding:.45rem .65rem calc(.65rem + env(safe-area-inset-bottom))!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav.owner-mobile-more-open a.owner-mobile-primary{display:none!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav.owner-mobile-more-open #ownerMoreButton{grid-column:1!important;grid-row:auto!important;order:-2!important;position:sticky!important;top:0!important;width:100%!important;min-height:48px!important;background:#080808!important;text-align:right!important;padding:.7rem 1rem!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav.owner-mobile-more-open a:not(.owner-mobile-primary){display:flex!important;grid-column:1!important;align-items:center;justify-content:flex-start;min-height:48px;padding:.7rem 1rem!important;background:#fff!important;color:#111!important;border:0!important;border-bottom:1px solid #ddd!important;border-radius:0!important;text-align:left!important;order:0!important}
+ body[data-app-mode="owner"][data-owner-workspace="management"] #ownerNav.owner-mobile-more-open .owner-exit-link{color:#a12d2d!important;font-weight:950!important}
+ body[data-app-mode="individual"] #barberNav.mobile-more-open .barber-signout-button,body[data-app-mode="owner"][data-owner-workspace="tony"] #barberNav.mobile-more-open .barber-signout-button{display:block!important;grid-column:1!important;order:0!important;width:100%;min-height:48px;padding:.7rem 1rem;background:#fff;color:#a12d2d;border:0;border-bottom:1px solid #ddd;text-align:left;font-weight:950}
+ .service-management-row{grid-template-columns:auto minmax(0,1fr)}.service-management-row em{grid-column:2}
+}
+
+/* v0.23.1 validation refinements */
+body[data-app-mode="individual"] #barberNav .barber-signout-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:.45rem .65rem;border:1px solid rgba(255,255,255,.32);border-radius:8px;background:transparent;color:#ffd8d8;font-size:.86rem;font-weight:850;cursor:pointer}
+body[data-app-mode="owner"] #barberNav .barber-signout-button{display:none!important}
+@media(max-width:700px){body[data-app-mode="individual"] #barberNav .barber-signout-button{display:none!important}body[data-app-mode="individual"] #barberNav.mobile-more-open .barber-signout-button{display:block!important;grid-column:1!important;order:0!important;width:100%;min-height:48px;padding:.7rem 1rem;background:#fff;color:#a12d2d;border:0;border-bottom:1px solid #ddd;text-align:left;font-weight:950}}
+/* Tony is authenticated through the Owner entry, never the regular Barber Launcher. */
+body[data-app-mode="owner"][data-owner-workspace="tony"] #barberNav .barber-signout-button,
+body[data-app-mode="owner"][data-owner-workspace="tony"] #barberNav.mobile-more-open .barber-signout-button{display:none!important}

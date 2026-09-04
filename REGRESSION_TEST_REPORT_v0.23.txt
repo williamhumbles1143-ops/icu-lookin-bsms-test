@@ -1,0 +1,51 @@
+ICU Lookin Barber Studio BSMS v0.23
+GitHub Test Hub / Launcher Separation / Services / Policy / Auth
+Regression Test Report
+
+RESULT: PASS
+
+Automated targeted checks: 42 / 42 PASS
+Navigation/render smoke checks: 71 / 71 PASS
+- Owner / Shop Management views: 32
+- Regular Barber views: 18
+- Customer views: 4
+- Tony Barber workspace views: 17
+Social Content / IndexedDB architecture preserved statically from v0.22.2.
+
+Preservation audit
+- v0.22.2 named JavaScript functions removed: 0
+- v0.22.2 application views removed: 0
+- New My Services view added: PASS
+- app.js Node syntax validation: PASS
+- Local file reference audit: PASS (0 missing references)
+- Test Hub / Client Launcher / Barber Launcher / Owner Launcher mobile-width overflow check at 390px: PASS
+
+Targeted feature checks
+- Root index opens ICU Lookin Test Hub with Client / Barber / Owner choices: PASS
+- First-use Barber password setup dialog: PASS
+- Password confirmation: PASS
+- Remember This Device is barber-specific: PASS
+- One barber's remembered state does not unlock another barber: PASS
+- v0.22.2 Barber mobile More one-tap behavior retained: PASS
+- Barber My Services opens from mobile More in one tap: PASS
+- Add custom Barber service: PASS
+- Custom service limited to its Barber: PASS
+- Custom service reaches Customer Booking for selected Barber: PASS
+- Custom service reaches Owner Pricing: PASS
+- Disabled service disappears from Booking: PASS
+- Disabled service disappears from Barber My Prices: PASS
+- Historical/scheduled disabled service remains available at POS: PASS
+- Custom barber-only label uses the correct Barber name: PASS
+- Appointment new-booking badge clears when Appointments is opened: PASS
+- Last Second Cancellation available in appointment status controls: PASS
+- Regular Barber Sign Out visible on desktop and mobile More: PASS
+- Tony does not receive a separate regular-Barber Sign Out: PASS
+- Owner mobile Dashboard / Appts / Ops / More behavior: PASS
+- Owner More selection opens page in one tap and closes menu: PASS
+- Owner Assistant resolves "Will's clients": PASS
+- Required Hair & Scalp Preparation Policy blocks Booking until I Agree: PASS
+- Policy acknowledgement recorded for the booking flow: PASS
+- Last Second Cancellation triggers minimum $10 next-booking deposit logic: PASS
+
+Prototype limitations
+GitHub Pages remains a static test environment. Passwords, Remember This Device, services, appointments, notifications and other data are browser-local during this test phase. Production-secure authentication and shared cross-device data require the planned Supabase backend.
