@@ -12,30 +12,26 @@
 <script id="appModeIsolationGuard">
 (function(){
   function safeGet(k){try{return sessionStorage.getItem(k)}catch(_){return null}}
-  var params=new URLSearchParams(location.search);
-  var hash=(location.hash||"").replace("#","");
-  var mode=params.get("app")||safeGet("icuAppMode");
-  if(mode!=="owner"&&mode!=="individual"&&mode!=="customer"){
-    if(hash==="owner"||hash.indexOf("owner-")===0)mode="owner";
-    else if(hash.indexOf("barber-")===0)mode="individual";
-    else mode="customer";
-  }
-  document.documentElement.setAttribute("data-app-mode",mode);
-  window.__ICU_EARLY_MODE__=mode;
-  if(mode==="individual"){
-    var requestedBarber=params.get("barber")||safeGet("icuBarberName")||"";
-    if(requestedBarber){
-      var sessionOk=safeGet("icuBarberAuth:"+requestedBarber)==="1";
-      var remembered=false;try{remembered=localStorage.getItem("icuBarberRemembered:"+requestedBarber)==="1"}catch(_){}
-      if(remembered&&!sessionOk){try{sessionStorage.setItem("icuBarberAuth:"+requestedBarber,"1")}catch(_){}}
-      if(!sessionOk&&!remembered){location.replace("BARBER_LAUNCHER.html?barber="+encodeURIComponent(requestedBarber));return}
-    }
-  }
-  if(mode==="owner"){
-    var workspace=safeGet("icuOwnerWorkspaceV1")||params.get("workspace")||"home";
-    if(workspace!=="management"&&workspace!=="tony"&&workspace!=="home")workspace="home";
-    document.documentElement.setAttribute("data-owner-workspace",workspace);
-  }
+  var params=new URLSearchParams(location.search),hash=(location.hash||"").replace("#",""),mode=params.get("app")||safeGet("icuAppMode");
+  if(mode!=="owner"&&mode!=="individual"&&mode!=="customer"){if(hash==="owner"||hash.indexOf("owner-")===0)mode="owner";else if(hash.indexOf("barber-")===0)mode="individual";else mode="customer"}
+  document.documentElement.setAttribute("data-app-mode",mode);window.__ICU_EARLY_MODE__=mode;
+  if(mode==="owner"){var workspace=safeGet("icuOwnerWorkspaceV1")||params.get("workspace")||"home";if(!["management","tony","home"].includes(workspace))workspace="home";document.documentElement.setAttribute("data-owner-workspace",workspace)}
+  if(mode!=="customer")document.documentElement.style.visibility="hidden";
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/supabase-config.js"></script>
+<script src="assets/supabase-auth.js"></script>
+<script id="staffAuthGuard">
+(async function(){
+  var mode=window.__ICU_EARLY_MODE__;if(mode==="customer")return;
+  try{
+    if(!window.ICUAuth)throw new Error("Authentication service unavailable");
+    var params=new URLSearchParams(location.search),cur;
+    if(mode==="owner"){cur=await ICUAuth.requireOwner();if(!cur||cur.identity.must_change_password){location.replace("OWNER_LAUNCHER.html");return}}
+    else{var barber=params.get("barber")||sessionStorage.getItem("icuBarberName")||"";cur=await ICUAuth.requireBarber(barber);if(!cur||cur.identity.must_change_password){location.replace("BARBER_LAUNCHER.html?barber="+encodeURIComponent(barber));return}}
+    document.documentElement.style.visibility="visible";
+  }catch(err){location.replace(mode==="owner"?"OWNER_LAUNCHER.html":"BARBER_LAUNCHER.html")}
 })();
 </script>
 
@@ -106,7 +102,7 @@
   <div id="ownerWorkspaceBar" class="owner-workspace-bar hidden">
     <button id="ownerWorkspaceBack" class="button secondary" type="button">← Back</button>
     <button id="ownerWorkspaceHome" class="button secondary" type="button">Dashboard / Switch Role</button>
-    <span id="ownerWorkspaceLabel"></span>
+    <span id="ownerWorkspaceLabel"></span><button id="ownerSignOutButton" class="button secondary" type="button">Sign Out</button>
   </div>
   <div id="customerNavigationBar" class="customer-navigation-bar hidden">
     <button id="customerBackButton" class="button secondary" type="button">← Back</button>

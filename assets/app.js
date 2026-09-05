@@ -6,9 +6,9 @@ const OWNER_DIARY_KEY="icuOwnerDiaryV1",INCIDENTS_KEY="icuIncidentsV1",INSPECTIO
 const BARBERS=["Tony","Mike","Will","Henry","Mon","Kody","Selena"];
 const STATUSES=["Scheduled","Confirmed","Checked In","In Progress","Completed","Cancelled","Last Second Cancellation","No Show"];
 const SERVICES=[
- {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut, styling & edge-up."},
+ {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut and finish."},
  {id:"beard",name:"Beard trim",minutes:15,defaultPrice:1000,description:"Beard trim and shaping."},
- {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing, without a haircut."},
+ {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing."},
  {id:"enhancement",name:"Enhancement",minutes:10,defaultPrice:1000,description:"Temporary enhancement service."},
  {id:"simple-design",name:"Simple design",minutes:10,defaultPrice:500,description:"Basic line or simple design."},
  {id:"detailed-design",name:"Detailed design",minutes:30,defaultPrice:2000,description:"Detailed custom hair design."},
@@ -1538,7 +1538,7 @@ function init(){
  $("#barberPreviewCampaign").addEventListener("click",()=>{const clients=barberMarketingClients();$("#barberCampaignPreview").classList.remove("hidden");$("#barberCampaignPreview").innerHTML=`<strong>${esc($("#barberCampaignName").value)} — ${clients.length} recipients</strong><p>${esc($("#barberCampaignMessage").value)} ${esc($("#barberCampaignOffer").value)}</p>`});
  window.addEventListener("icuMessagesChanged",()=>{updateUnifiedNotifications();if(appMode()==="individual"&&!$("#view-barber-messages").classList.contains("hidden"))renderBarberMessages();if(appMode()==="owner"&&!$("#view-owner-messages").classList.contains("hidden"))renderOwnerMessages()});
  window.addEventListener("storage",e=>{if([APPOINTMENTS_KEY,WALKIN_KEY,MESSAGES_KEY,MESSAGE_GROUPS_KEY,MESSAGE_READ_KEY].includes(e.key))updateUnifiedNotifications()});
- $("#agreeHairScalpPolicy")?.addEventListener("click",agreeHairScalpPolicy);$("#barberSignOutButton")?.addEventListener("click",()=>{if(appMode()==="owner"){location.href="OWNER_LAUNCHER.html";return}const b=activeBarber();if(!b)return;sessionStorage.removeItem(`icuBarberAuth:${b}`);localStorage.removeItem(`icuBarberRemembered:${b}`);location.href="BARBER_LAUNCHER.html"});
+ $("#agreeHairScalpPolicy")?.addEventListener("click",agreeHairScalpPolicy);$("#barberSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href=appMode()==="owner"?"OWNER_LAUNCHER.html":"BARBER_LAUNCHER.html"});$("#ownerSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href="OWNER_LAUNCHER.html"});
  configureMode();
 }
 document.addEventListener("input",e=>{if(e.target.matches('input[type="tel"]'))applyPhoneMask(e.target)});

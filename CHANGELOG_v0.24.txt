@@ -1,0 +1,15 @@
+ICU Lookin BSMS v0.24 — Supabase Authentication Integration
+
+- Replaced browser-only barber password simulation with Supabase Auth.
+- Added secure Owner sign-in for Tony and secure Barber sign-in for Will, Mike, Henry, Mon, and Kody.
+- Selena remains disabled/pending until her real email is added.
+- Added first-login permanent password change flow (minimum 8 characters).
+- Added Remember This Device session persistence choice.
+- Added Supabase-backed Sign Out for Barber and Owner workspaces.
+- Added staff-route guards to prevent Owner/Barber workspace access without the matching authenticated role.
+- Staff email addresses are NOT hardcoded into the public frontend; users enter their own account email.
+- Added server-side identity helper and password-change completion RPCs with RLS-compatible access.
+- Hardened profile privileges so authenticated users cannot elevate their own role.
+- Existing v0.23 business features and local prototype data behavior are preserved.
+
+Important: v0.24 moves STAFF AUTHENTICATION to Supabase. Appointments, POS, messaging, social media files, and other operational data are not all cloud-synced yet; those migrations come next.
