@@ -32,6 +32,14 @@
     if(rpcError)throw rpcError;
     return true;
   }
+
+  async function changePasswordVerified(currentPassword,password){
+    const {data:{user},error:userError}=await client.auth.getUser();
+    if(userError||!user?.email)throw new Error("Unable to verify the signed-in account.");
+    const {error:verifyError}=await client.auth.signInWithPassword({email:user.email,password:currentPassword});
+    if(verifyError)throw new Error("Current password is incorrect.");
+    return changePassword(password);
+  }
   async function signOut(){
     try{await client.auth.signOut()}finally{
       localStorage.removeItem(REMEMBER);
@@ -56,5 +64,5 @@
     if(!cur||cur.identity.role!=="owner"||!cur.identity.active||cur.identity.account_locked)return null;
     return cur;
   }
-  window.ICUAuth={client,signIn,signOut,current,getIdentity,changePassword,requireBarber,requireOwner,setRemember};
+  window.ICUAuth={client,signIn,signOut,current,getIdentity,changePassword,changePasswordVerified,requireBarber,requireOwner,setRemember};
 })();

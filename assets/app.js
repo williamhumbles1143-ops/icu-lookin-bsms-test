@@ -3,12 +3,12 @@
 const OWNER_BARBER_NAME="Tony";
 const OWNER_DIARY_KEY="icuOwnerDiaryV1",INCIDENTS_KEY="icuIncidentsV1",INSPECTIONS_KEY="icuInspectionsV1",INSPECTION_ISSUES_KEY="icuInspectionIssuesV1",DOCUMENTS_KEY="icuDocumentsV1",AUDIT_KEY="icuAuditV1",CHECKLISTS_KEY="icuChecklistsV1",SHOP_STATUS_KEY="icuShopStatusV1",OWNER_SETTINGS_KEY="icuOwnerSettingsV1",BARBER_ROSTER_KEY="icuBarberRosterV1",CAMERA_CONFIG_KEY="icuCameraConfigV1",GROWTH_CAMPAIGNS_KEY="icuGrowthCampaignsV1",REFERRALS_KEY="icuReferralsV1",ATTRIBUTION_KEY="icuAttributionV1";
 
-const BARBERS=["Tony","Mike","Will","Henry","Mon","Kody","Selena"];
+const BARBERS=["Tony","Mike","Will","Henry","Mon","Kody"];window.BARBERS=BARBERS;
 const STATUSES=["Scheduled","Confirmed","Checked In","In Progress","Completed","Cancelled","Last Second Cancellation","No Show"];
 const SERVICES=[
- {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut and finish."},
+ {id:"haircut",name:"Haircut",minutes:30,defaultPrice:2500,description:"Classic haircut, styling & edge-up."},
  {id:"beard",name:"Beard trim",minutes:15,defaultPrice:1000,description:"Beard trim and shaping."},
- {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing."},
+ {id:"edge-up",name:"Edge up",minutes:15,defaultPrice:1000,description:"Hairline and edge detailing, without a haircut."},
  {id:"enhancement",name:"Enhancement",minutes:10,defaultPrice:1000,description:"Temporary enhancement service."},
  {id:"simple-design",name:"Simple design",minutes:10,defaultPrice:500,description:"Basic line or simple design."},
  {id:"detailed-design",name:"Detailed design",minutes:30,defaultPrice:2000,description:"Detailed custom hair design."},
@@ -42,7 +42,7 @@ function formatDateTime(value){return new Intl.DateTimeFormat("en-US",{weekday:"
 function formatTime(value){return new Intl.DateTimeFormat("en-US",{hour:"numeric",minute:"2-digit"}).format(new Date(value))}
 function toast(message){const el=$("#toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),2600)}
 function loadAppointments(){try{return JSON.parse(localStorage.getItem(APPOINTMENTS_KEY))||[]}catch{return[]}}
-function saveAppointments(items){localStorage.setItem(APPOINTMENTS_KEY,JSON.stringify(items))}
+function saveAppointments(items){localStorage.setItem(APPOINTMENTS_KEY,JSON.stringify(items));window.ICUCloud?.saveLegacyKey(APPOINTMENTS_KEY,items)}
 function loadCustomServices(){return loadKey(CUSTOM_SERVICES_KEY,[])}
 function saveCustomServices(items){saveKey(CUSTOM_SERVICES_KEY,items)}
 function allServices(){return [...SERVICES,...loadCustomServices()]}
@@ -73,7 +73,7 @@ function loadPricing(){
    return defaults;
  }catch{return defaults}
 }
-function savePricing(data){localStorage.setItem(PRICING_KEY,JSON.stringify(data))}
+function savePricing(data){localStorage.setItem(PRICING_KEY,JSON.stringify(data));window.ICUCloud?.saveLegacyKey(PRICING_KEY,data)}
 function serviceById(id){return allServices().find(service=>service.id===id)}
 function servicesForBarber(barber,includeInactive=false){const eligible=eligibleServicesForBarber(barber);return includeInactive?eligible:eligible.filter(service=>serviceIsActiveForBarber(barber,service.id))}
 function effectivePrice(barber,serviceId){
@@ -136,7 +136,7 @@ function currentShopStatus(){return loadKey(SHOP_STATUS_KEY,{status:"Open",messa
 function setShopStatus(status,message=""){saveKey(SHOP_STATUS_KEY,{status,message,updatedAt:new Date().toISOString()});audit("Shop status changed",`${status}${message?": "+message:""}`)}
 function licenseWarningLevel(expiration){if(!expiration)return null;const d=Math.ceil((new Date(expiration+"T23:59:59")-new Date())/86400000);if(d<0)return{label:"Expired",severity:"danger"};if(d<=7)return{label:`${d} days`,severity:"danger"};if(d<=30)return{label:`${d} days`,severity:"warning"};if(d<=60)return{label:`${d} days`,severity:"notice"};return null}
 function ownerDashboardAlerts(){const a=[];activeBarberRoster().forEach(r=>{const w=licenseWarningLevel(r.licenseExpiration);if(w)a.push({type:w.severity,text:`${r.name} license: ${w.label}`})});const issues=loadKey(INSPECTION_ISSUES_KEY,[]).filter(i=>i.status!=="Resolved");if(issues.length)a.push({type:"danger",text:`${issues.length} open inspection issue${issues.length===1?"":"s"}`});const incidents=loadKey(INCIDENTS_KEY,[]).filter(i=>i.status!=="Closed");if(incidents.length)a.push({type:"warning",text:`${incidents.length} incident${incidents.length===1?"":"s"} requiring follow-up`});const s=currentShopStatus();if(s.status!=="Open")a.push({type:"notice",text:`Shop status: ${s.status}${s.message?" — "+s.message:""}`});return a}
-function systemHealth(){return[{name:"Browser Storage",status:"Connected",detail:"Local prototype storage available"},{name:"Payments",status:"Prototype",detail:"No live processor connected"},{name:"Database",status:"Prototype",detail:"Shared production database not connected"},{name:"Cameras",status:"Integration Ready",detail:"Camera/NVR hardware not connected"},{name:"Notifications",status:"Local",detail:"Browser/local prototype notifications"},{name:"Backups",status:"Manual",detail:"Use Backup / Export"}]}
+function systemHealth(){return[{name:"Supabase Auth",status:"Connected",detail:"Staff authentication is handled by Supabase Auth"},{name:"Database",status:"Connected",detail:"Operational BSMS state is synchronized through Supabase Postgres"},{name:"Realtime",status:"Connected",detail:"Staff state and messages refresh across signed-in devices"},{name:"Social Storage",status:"Connected",detail:"Barber photo/video content is stored privately in Supabase Storage"},{name:"Payments",status:"Prototype",detail:"POS records are cloud-synced; no live card processor is connected yet"},{name:"Cameras",status:"Integration Ready",detail:"Camera/NVR hardware is not connected"},{name:"Backups",status:"Cloud + Export",detail:"Supabase is the shared source of truth; Backup / Export remains available"}]}
 function ownerGuideData(){return{
 "Dashboard & Roles":"The Owner App opens to Tony's dashboard. Use Owner / Shop Management for administration and Tony the Barber / My Barber Tools for Tony's personal barber work.",
 "Add a barber":"Open Barber Management and choose Add Barber. Enter the barber's name, start date, license number, and expiration date. New hires are not part of the Original Review Group.",
@@ -390,21 +390,31 @@ function reviewBooking(){
  else{depositBox.classList.add("hidden");ack.checked=false;$("#confirmButton").textContent="Confirm booking"}
  $("#reviewPanel").classList.remove("hidden");$("#successPanel").classList.add("hidden");$("#reviewPanel").scrollIntoView({behavior:"smooth",block:"start"});
 }
-function confirmBooking(){
+async function confirmBooking(){
  if(!pending)return;
  if(pending.depositRequired&&!$("#depositAcknowledgement").checked){toast("Acknowledge the non-refundable deposit policy before continuing.");return}
  if(hasConflict(pending.barber,pending.startAt,pending.endAt)){toast("That time was just booked. Select another time.");$("#reviewPanel").classList.add("hidden");refreshTimes();return}
  const finalized={...pending};
  if(finalized.depositRequired){
    finalized.depositPaid=finalized.depositRequired;finalized.depositStatus="Paid";finalized.depositPaymentMethod=$("#depositPaymentMethod").value;finalized.depositAcknowledgedAt=new Date().toISOString();finalized.balanceDue=Math.max(0,finalized.customerTotal-finalized.depositPaid);
-   const deposits=loadKey(DEPOSIT_PAYMENTS_KEY,[]);deposits.push({id:`dep-${Date.now()}`,appointmentId:finalized.id,barber:finalized.barber,customer:`${finalized.firstName} ${finalized.lastName}`,phone:finalized.phone,amount:finalized.depositPaid,method:finalized.depositPaymentMethod,nonRefundable:true,reason:finalized.depositReason,paidAt:new Date().toISOString()});saveKey(DEPOSIT_PAYMENTS_KEY,deposits)
  }else{finalized.depositPaid=0;finalized.balanceDue=finalized.customerTotal}
- const items=loadAppointments();items.push(finalized);saveAppointments(items);sessionStorage.removeItem(HAIR_SCALP_POLICY_SESSION_KEY);setCustomerSession(finalized.phone);if(finalized.howHeard){const attrs=loadKey(ATTRIBUTION_KEY,[]);attrs.push({id:`attr-${Date.now()}`,appointmentId:finalized.id,source:finalized.howHeard,createdAt:new Date().toISOString()});saveKey(ATTRIBUTION_KEY,attrs)}
+ const button=$("#confirmButton"),oldText=button.textContent;button.disabled=true;button.textContent="Saving appointment…";
+ try{
+   if(window.ICUCloud)await ICUCloud.createBooking(finalized);
+ }catch(error){
+   toast(error?.message||"Unable to save the appointment.");
+   button.disabled=false;button.textContent=oldText;$("#reviewPanel").classList.add("hidden");await window.ICUCloud?.publicState?.();refreshTimes();return
+ }
+ if(finalized.depositPaid){
+   const deposits=loadKey(DEPOSIT_PAYMENTS_KEY,[]);deposits.push({id:`dep-${Date.now()}`,appointmentId:finalized.id,barber:finalized.barber,customer:`${finalized.firstName} ${finalized.lastName}`,phone:finalized.phone,amount:finalized.depositPaid,method:finalized.depositPaymentMethod,nonRefundable:true,reason:finalized.depositReason,paidAt:finalized.depositAcknowledgedAt});localStorage.setItem(DEPOSIT_PAYMENTS_KEY,JSON.stringify(deposits))
+ }
+ const items=loadAppointments().filter(a=>a.id!==finalized.id);items.push(finalized);localStorage.setItem(APPOINTMENTS_KEY,JSON.stringify(items));sessionStorage.removeItem(HAIR_SCALP_POLICY_SESSION_KEY);setCustomerSession(finalized.phone);
+ if(finalized.howHeard){const attrs=loadKey(ATTRIBUTION_KEY,[]);attrs.push({id:`attr-${Date.now()}`,appointmentId:finalized.id,source:finalized.howHeard,createdAt:new Date().toISOString()});localStorage.setItem(ATTRIBUTION_KEY,JSON.stringify(attrs))}
  const successHtml=`<div class="review-grid"><div><span>Date</span><strong>${esc(formatDateTime(finalized.startAt))}</strong></div><div><span>Barber</span><strong>${esc(finalized.barber)}</strong></div><div><span>Services</span><strong>${esc(serviceNames(finalized.serviceIds))}</strong></div>${finalized.notes?`<div><span>Customer Notes</span><strong>${esc(finalized.notes)}</strong></div>`:""}${finalized.afterHours?`<div><span>After-Hours Fee</span><strong>${money(AFTER_HOURS_CUSTOMER_FEE)}</strong></div>`:""}${finalized.depositPaid?`<div><span>Non-Refundable Deposit Paid</span><strong>${money(finalized.depositPaid)}</strong></div><div><span>Remaining Balance</span><strong>${money(finalized.balanceDue)}</strong></div>`:""}<div><span>Total</span><strong>${money(finalized.customerTotal)}</strong></div></div>`;
  resetBookingForm();
  $("#successDetails").innerHTML=successHtml;
  $("#successPanel").classList.remove("hidden");if(!$("#successPanel .shop-location-card"))$("#successPanel").insertAdjacentHTML("beforeend",shopLocationCard());
- $("#successPanel").scrollIntoView({behavior:"smooth",block:"start"});
+ $("#successPanel").scrollIntoView({behavior:"smooth",block:"start"});button.disabled=false;
 }
 function resetBookingForm(){
  $("#bookingForm").reset();$("#date").value=today();pending=null;renderCustomerServices();prefillSignedInCustomerBooking();refreshTimes();$("#reviewPanel").classList.add("hidden");$("#depositCheckout").classList.add("hidden");$("#successPanel").classList.add("hidden");updateBookingDepositNotice();updateBookingSummary();
@@ -608,8 +618,8 @@ function defaultInventory(){return[
  {id:"trimmers",name:"Detail Trimmers",category:"Equipment",quantity:7,minimum:7,cost:119.00},
  {id:"capes",name:"Barber Capes",category:"Equipment",quantity:10,minimum:8,cost:24.00}
 ]}
-function loadInventory(){try{return JSON.parse(localStorage.getItem(INVENTORY_KEY))||defaultInventory()}catch{return defaultInventory()}}
-function saveInventory(items){localStorage.setItem(INVENTORY_KEY,JSON.stringify(items))}
+function loadInventory(){return loadKey(INVENTORY_KEY,defaultInventory())}
+function saveInventory(items){saveKey(INVENTORY_KEY,items)}
 function defaultExpenses(){return[
  {id:"rent",name:"Shop Rent",amount:3500},
  {id:"electric",name:"Electricity",amount:620},
@@ -618,15 +628,15 @@ function defaultExpenses(){return[
  {id:"supplies",name:"Supplies",amount:750},
  {id:"insurance",name:"Insurance",amount:275}
 ]}
-function loadExpenses(){try{return JSON.parse(localStorage.getItem(EXPENSE_KEY))||defaultExpenses()}catch{return defaultExpenses()}}
-function saveExpenses(items){localStorage.setItem(EXPENSE_KEY,JSON.stringify(items))}
+function loadExpenses(){return loadKey(EXPENSE_KEY,defaultExpenses())}
+function saveExpenses(items){saveKey(EXPENSE_KEY,items)}
 function defaultLocations(){return[
  {id:"houston-main",name:"Houston Main Studio",status:"Active",revenue:0,customers:0,barbers:BARBERS.length},
  {id:"houston-west",name:"Houston West",status:"Future",revenue:0,customers:0,barbers:0},
  {id:"katy",name:"Katy",status:"Future",revenue:0,customers:0,barbers:0}
 ]}
-function loadLocations(){try{return JSON.parse(localStorage.getItem(LOCATION_KEY))||defaultLocations()}catch{return defaultLocations()}}
-function saveLocations(items){localStorage.setItem(LOCATION_KEY,JSON.stringify(items))}
+function loadLocations(){return loadKey(LOCATION_KEY,defaultLocations())}
+function saveLocations(items){saveKey(LOCATION_KEY,items)}
 function appointmentsForDate(dateValue){return loadAppointments().filter(a=>a.startAt.startsWith(dateValue)&&!["Cancelled","Last Second Cancellation"].includes(a.status))}
 function completedInBounds(start,end,barber=""){return loadAppointments().filter(a=>a.status==="Completed"&&(!barber||a.barber===barber)&&new Date(a.startAt)>=start&&new Date(a.startAt)<=end)}
 function renderMiniSchedule(items,target){
@@ -730,7 +740,7 @@ const WALKIN_KEY="icuWalkinsV1",WAITLIST_KEY="icuWaitlistV1",MAINTENANCE_KEY="ic
 const DEPOSIT_SETTINGS_KEY="icuDepositSettingsV1",DEPOSIT_PAYMENTS_KEY="icuDepositPaymentsV1",BOOTH_RENT_PAYMENTS_KEY="icuBoothRentPaymentsV1",POS_TRANSACTIONS_KEY="icuPosTransactionsV1",REVIEWS_KEY="icuReviewsV1",APPT_MESSAGES_KEY="icuAppointmentMessagesV1";
 const SHOP={name:"ICU Lookin Barber Studio",address:"8308 Broadway St, Houston, TX 77061"};
 function loadKey(key,fallback){try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}}
-function saveKey(key,value){localStorage.setItem(key,JSON.stringify(value))}
+function saveKey(key,value){localStorage.setItem(key,JSON.stringify(value));window.ICUCloud?.saveLegacyKey(key,value)}
 
 function loadDepositSettings(){const saved=loadKey(DEPOSIT_SETTINGS_KEY,{}),result={};BARBERS.forEach(b=>result[b]={required:Boolean(saved[b]?.required),amount:Number(saved[b]?.amount||2000)});return result}
 function saveDepositSettingsData(settings){saveKey(DEPOSIT_SETTINGS_KEY,settings)}
@@ -770,7 +780,18 @@ function reviewsForBarber(b){return loadReviews().filter(r=>r.barber===b)}
 function ratingsUnlocked(){const cohort=originalRatingCohort();return cohort.length>0&&cohort.every(b=>verifiedReviewsFor(b).length>=10)}
 function barberDisplayName(b){const r=reviewsForBarber(b);return ratingsUnlocked()?`${b} — ★ ${(r.reduce((s,x)=>s+Number(x.stars),0)/r.length).toFixed(1)} (${r.length} reviews)`:b}
 function appointmentMessages(id){return loadKey(APPT_MESSAGES_KEY,[]).filter(m=>m.appointmentId===id).sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt))}
-function sendAppointmentMessage(id,sender,text){text=String(text||"").trim();if(!text)return;const a=loadKey(APPT_MESSAGES_KEY,[]);a.push({id:`am-${Date.now()}`,appointmentId:id,sender,text,createdAt:new Date().toISOString()});saveKey(APPT_MESSAGES_KEY,a)}
+async function sendAppointmentMessage(id,sender,text){
+ text=String(text||"").trim();if(!text)return null;
+ const item={id:`am-${Date.now()}`,appointmentId:id,sender,text,createdAt:new Date().toISOString()};
+ if(appMode()==="customer"&&window.ICUCloud){
+   const phone=customerSessionPhone()||normalizePhone($("#customerProfileEmail")?.value||"");
+   if(!phone)throw new Error("Customer session phone is required.");
+   await ICUCloud.sendCustomerAppointmentMessage(phone,item);
+ }
+ const a=loadKey(APPT_MESSAGES_KEY,[]);a.push(item);
+ if(appMode()==="customer")localStorage.setItem(APPT_MESSAGES_KEY,JSON.stringify(a));else saveKey(APPT_MESSAGES_KEY,a);
+ return item
+}
 function shopLocationCard(){return`<div class="shop-location-card"><strong>Shop Location</strong><span>${esc(SHOP.address)}</span><button class="button secondary" type="button" data-directions>Get Directions</button></div>`}
 function completedUnreviewed(c){const r=loadReviews();return c.appointments.filter(a=>a.status==="Completed"&&!r.some(x=>x.appointmentId===a.id))}
 
@@ -785,7 +806,7 @@ function customerRecords(){
    if(!c.firstName&&first)c.firstName=first;if(!c.lastName&&last)c.lastName=last;if(!c.email&&email)c.email=email;if(!c.phone&&raw.phone)c.phone=formatPhone(raw.phone);
    map.set(key,c);return c
  }
- loadAppointments().forEach(a=>{const c=ensure(a);c.appointments.push(a);if(a.barber)c.barbers.add(a.barber);c.total+=customerTotalForAppointment(a);if(!c.last||new Date(a.startAt)>new Date(c.last))c.last=a.startAt});
+ loadAppointments().forEach(a=>{if(appMode()==="customer"&&!normalizePhone(a.phone)&&!a.email)return;const c=ensure(a);c.appointments.push(a);if(a.barber)c.barbers.add(a.barber);c.total+=customerTotalForAppointment(a);if(!c.last||new Date(a.startAt)>new Date(c.last))c.last=a.startAt});
  loadQueue(WALKIN_KEY).forEach(w=>{if(!normalizePhone(w.phone)&&!w.email)return;const c=ensure(w);if(w.barber)c.barbers.add(w.barber);const when=w.startAt||w.createdAt;if(when&&(!c.last||new Date(when)>new Date(c.last)))c.last=when});
  loadKey(POS_TRANSACTIONS_KEY,[]).forEach(t=>{if(!normalizePhone(t.phone))return;const c=ensure({name:t.customer,phone:t.phone});if(t.barber)c.barbers.add(t.barber);if(t.createdAt&&(!c.last||new Date(t.createdAt)>new Date(c.last)))c.last=t.createdAt});
  return[...map.values()]
@@ -806,21 +827,33 @@ function latestPriorAppointmentForCustomer(phone,email){
 function renderCustomerProfile(){
  const lookupInput=$("#customerProfileEmail"),lookupPanel=$("#customerProfileLookup"),target=$("#customerProfileContent");
  let c=signedInCustomer();
- if(!c){const lookup=lookupInput.value.trim();if(!lookup){lookupPanel?.classList.remove("hidden");target.innerHTML='<section class="panel"><h2>Enter an email address or phone number</h2></section>';updateCustomerSessionUi();return}c=customerByLookup(lookup);if(!c){lookupPanel?.classList.remove("hidden");target.innerHTML='<section class="panel"><h2>No profile found</h2><p>Book an appointment first to create a local profile.</p></section>';updateCustomerSessionUi();return}setCustomerSession(c)}
+ if(!c){const lookup=lookupInput.value.trim();if(!lookup){lookupPanel?.classList.remove("hidden");target.innerHTML='<section class="panel"><h2>Enter an email address or phone number</h2></section>';updateCustomerSessionUi();return}c=customerByLookup(lookup);if(!c){lookupPanel?.classList.remove("hidden");target.innerHTML='<section class="panel"><h2>No profile found</h2><p>Book an appointment first to create a profile.</p></section>';updateCustomerSessionUi();return}setCustomerSession(c)}
  if(lookupInput)lookupInput.value=formatPhone(c.phone)||c.email||"";
  lookupPanel?.classList.add("hidden");updateCustomerSessionUi();
  const storageKey=customerStorageKey(c),prefs=loadKey(PREFERENCES_KEY,{})[storageKey]||{},familyStore=loadKey(FAMILY_KEY,{}),family=familyStore[storageKey]||familyStore[c.email]||[],myReviews=loadReviews().filter(r=>c.appointments.some(a=>a.id===r.appointmentId));
- target.innerHTML=`<div class="profile-grid"><section class="profile-card"><p class="eyebrow">Customer</p><h2>${esc(c.firstName+" "+c.lastName)}</h2><p>${esc(formatPhone(c.phone)||"No phone")}${c.email?`<br>${esc(c.email)}`:""}</p><button class="button primary" id="bookPrimaryCustomer">Book Appointment</button>${shopLocationCard()}<div class="profile-row"><span>Total appointments</span><strong>${c.appointments.length}</strong></div></section><section class="profile-card"><h2>Saved preferences</h2><label>Preferred haircut / guard<textarea id="profileHairPreference">${esc(prefs.hair||"")}</textarea></label><label>Beard preference<textarea id="profileBeardPreference">${esc(prefs.beard||"")}</textarea></label><label>Sensitivities or notes<textarea id="profileSensitivity">${esc(prefs.sensitivity||"")}</textarea></label><button class="button primary" id="saveProfilePrefs">Save preferences</button></section><section class="profile-card full"><div class="section-heading-row"><h2>Family account</h2><button class="button secondary" id="addFamilyMember">Add member</button></div>${family.map((f,i)=>`<div class="family-book-row"><div><strong>${esc(f.name)}</strong><span class="help">${esc(f.relationship)}</span></div><button class="button secondary" data-family-book-index="${i}">Book an Appointment</button></div>`).join("")||'<p class="help">No family members added.</p>'}</section><section class="profile-card full"><h2>Reviews</h2>${completedUnreviewed(c).map(a=>`<div class="review-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong><label>Rating<select data-review-stars="${a.id}"><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label><label>Review<textarea data-review-text="${a.id}"></textarea></label><button class="button primary" data-submit-review="${a.id}">Submit Review</button></div>`).join("")||'<p class="help">Reviews can be left after a completed appointment.</p>'}${myReviews.map(r=>`<div class="review-card"><strong>★ ${r.stars} — ${esc(r.barber)}</strong><p>${esc(r.text)}</p>${r.response?`<div class="barber-response"><strong>${esc(r.barber)} — Barber Response</strong><p>${esc(r.response)}</p></div>`:""}</div>`).join("")}</section><section class="profile-card full"><h2>Appointment Messages</h2>${c.appointments.filter(a=>!["Cancelled","Last Second Cancellation"].includes(a.status)).map(a=>`<div class="appointment-message-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong>${shopLocationCard()}<div class="appointment-thread">${appointmentMessages(a.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-client-message-input="${a.id}" placeholder="Message barber"><button class="button secondary" data-client-message-send="${a.id}">Send</button></div></div>`).join("")}</section><section class="profile-card full"><h2>Appointment history</h2>${c.appointments.sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)).map(a=>`<div class="profile-row"><span>${esc(formatDateTime(a.startAt))} — ${esc(a.barber)}</span><strong>${money(customerTotalForAppointment(a))}</strong></div>`).join("")}</section></div>`;
- $("#saveProfilePrefs").onclick=()=>{const all=loadKey(PREFERENCES_KEY,{});all[storageKey]={hair:$("#profileHairPreference").value,beard:$("#profileBeardPreference").value,sensitivity:$("#profileSensitivity").value};saveKey(PREFERENCES_KEY,all);toast("Preferences saved.")};
- $("#addFamilyMember").onclick=()=>{const name=prompt("Family member name:");if(!name)return;const relationship=prompt("Relationship:","Child")||"Family",all=loadKey(FAMILY_KEY,{});all[storageKey]=all[storageKey]||[];all[storageKey].push({name,relationship});saveKey(FAMILY_KEY,all);renderCustomerProfile()};
+ target.innerHTML=`<div class="profile-grid"><section class="profile-card"><p class="eyebrow">Customer</p><h2>${esc(c.firstName+" "+c.lastName)}</h2><p>${esc(formatPhone(c.phone)||"No phone")}${c.email?`<br>${esc(c.email)}`:""}</p><button class="button primary" id="bookPrimaryCustomer">Book Appointment</button>${shopLocationCard()}<div class="profile-row"><span>Total appointments</span><strong>${c.appointments.length}</strong></div></section><section class="profile-card"><h2>Saved preferences</h2><label>Preferred haircut / guard<textarea id="profileHairPreference">${esc(prefs.hair||"")}</textarea></label><label>Beard preference<textarea id="profileBeardPreference">${esc(prefs.beard||"")}</textarea></label><label>Sensitivities or notes<textarea id="profileSensitivity">${esc(prefs.sensitivity||"")}</textarea></label><button class="button primary" id="saveProfilePrefs">Save preferences</button></section><section class="profile-card full"><div class="section-heading-row"><h2>Family account</h2><button class="button secondary" id="addFamilyMember">Add member</button></div>${family.map((f,i)=>`<div class="family-book-row"><div><strong>${esc(f.name)}</strong><span class="help">${esc(f.relationship)}</span></div><button class="button secondary" data-family-book-index="${i}">Book an Appointment</button></div>`).join("")||'<p class="help">No family members added.</p>'}</section><section class="profile-card full"><h2>Reviews</h2>${completedUnreviewed(c).map(a=>`<div class="review-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong><label>Rating<select data-review-stars="${a.id}"><option value="5">★★★★★ 5</option><option value="4">★★★★ 4</option><option value="3">★★★ 3</option><option value="2">★★ 2</option><option value="1">★ 1</option></select></label><label>Review<textarea data-review-text="${a.id}"></textarea></label><button class="button primary" data-submit-review="${a.id}">Submit Review</button></div>`).join("")||'<p class="help">Reviews can be left after a completed appointment.</p>'}${myReviews.map(r=>`<div class="review-card"><strong>★ ${r.stars} — ${esc(r.barber)}</strong><p>${esc(r.text)}</p>${r.response?`<div class="barber-response"><strong>${esc(r.barber)} — Barber Response</strong><p>${esc(r.response)}</p></div>`:""}</div>`).join("")}</section><section class="profile-card full"><h2>Appointment Messages</h2>${c.appointments.filter(a=>!["Cancelled","Last Second Cancellation"].includes(a.status)).map(a=>`<div class="appointment-message-card"><strong>${esc(a.barber)} • ${esc(formatDateTime(a.startAt))}</strong>${shopLocationCard()}<div class="appointment-thread">${appointmentMessages(a.id).map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")||'<p class="help">No messages yet.</p>'}</div><div class="lookup-row"><input data-client-message-input="${a.id}" placeholder="Message barber"><button class="button secondary" data-client-message-send="${a.id}">Send</button></div></div>`).join("")}</section><section class="profile-card full"><h2>Appointment history</h2>${c.appointments.slice().sort((a,b)=>new Date(b.startAt)-new Date(a.startAt)).map(a=>`<div class="profile-row"><span>${esc(formatDateTime(a.startAt))} — ${esc(a.barber)}</span><strong>${money(customerTotalForAppointment(a))}</strong></div>`).join("")}</section></div>`;
+ $("#saveProfilePrefs").onclick=async()=>{const all=loadKey(PREFERENCES_KEY,{}),familyAll=loadKey(FAMILY_KEY,{}),next={hair:$("#profileHairPreference").value,beard:$("#profileBeardPreference").value,sensitivity:$("#profileSensitivity").value};try{await ICUCloud.saveCustomerProfile(c.phone,familyAll[storageKey]||family,next);all[storageKey]=next;localStorage.setItem(PREFERENCES_KEY,JSON.stringify(all));toast("Preferences saved.")}catch(error){toast(error?.message||"Preferences could not be saved.")}};
+ $("#addFamilyMember").onclick=async()=>{const name=prompt("Family member name:");if(!name)return;const relationship=prompt("Relationship:","Child")||"Family",all=loadKey(FAMILY_KEY,{}),prefsAll=loadKey(PREFERENCES_KEY,{});const updated=[...(all[storageKey]||family),{name,relationship}];try{await ICUCloud.saveCustomerProfile(c.phone,updated,prefsAll[storageKey]||prefs);all[storageKey]=updated;localStorage.setItem(FAMILY_KEY,JSON.stringify(all));renderCustomerProfile();toast("Family member saved.")}catch(error){toast(error?.message||"Family member could not be saved.")}};
  $("#bookPrimaryCustomer").onclick=()=>{showView("book");$("#firstName").value=c.firstName;$("#lastName").value=c.lastName;$("#phone").value=formatPhone(c.phone);$("#email").value=c.email||"";$("#notes").value="";updateBookingDepositNotice();updateBookingSummary()};
  $$('[data-family-book-index]').forEach(b=>b.onclick=()=>{const m=family[+b.dataset.familyBookIndex];showView("book");$("#firstName").value=c.firstName;$("#lastName").value=c.lastName;$("#phone").value=formatPhone(c.phone);$("#email").value=c.email||"";$("#notes").value=`This is for ${m.name}.`;updateBookingDepositNotice();updateBookingSummary()});
- $$('[data-submit-review]').forEach(b=>b.onclick=()=>{const a=c.appointments.find(x=>x.id===b.dataset.submitReview),text=document.querySelector(`[data-review-text="${a.id}"]`).value.trim();if(!text)return toast("Enter your review.");const r=loadReviews();r.push({id:`review-${Date.now()}`,appointmentId:a.id,barber:a.barber,stars:+document.querySelector(`[data-review-stars="${a.id}"]`).value,text,createdAt:new Date().toISOString(),response:""});saveReviews(r);renderCustomerProfile();toast("Review submitted.")});
- $$('[data-client-message-send]').forEach(b=>b.onclick=()=>{const i=document.querySelector(`[data-client-message-input="${b.dataset.clientMessageSend}"]`);if(i.value.trim()){sendAppointmentMessage(b.dataset.clientMessageSend,c.firstName+" "+c.lastName,i.value);renderCustomerProfile()}})
+ $$('[data-submit-review]').forEach(b=>b.onclick=async()=>{const a=c.appointments.find(x=>x.id===b.dataset.submitReview),text=document.querySelector(`[data-review-text="${a.id}"]`).value.trim();if(!text)return toast("Enter your review.");const review={id:`review-${Date.now()}`,appointmentId:a.id,barber:a.barber,stars:+document.querySelector(`[data-review-stars="${a.id}"]`).value,text,createdAt:new Date().toISOString(),response:""};try{const saved=await ICUCloud.submitCustomerReview(c.phone,review);const r=loadReviews();r.push(saved||review);localStorage.setItem(REVIEWS_KEY,JSON.stringify(r));renderCustomerProfile();toast("Review submitted.")}catch(error){toast(error?.message||"Review could not be submitted.")}});
+ $$('[data-client-message-send]').forEach(b=>b.onclick=async()=>{const i=document.querySelector(`[data-client-message-input="${b.dataset.clientMessageSend}"]`);if(i.value.trim()){try{await sendAppointmentMessage(b.dataset.clientMessageSend,c.firstName+" "+c.lastName,i.value);i.value="";renderCustomerProfile()}catch(error){toast(error?.message||"Message could not be sent.")}}})
 }
+
 function renderLoyalty(){const target=$("#loyaltyContent"),lookupPanel=$("#loyaltyLookup"),email=$("#loyaltyEmail").value.trim();let c=signedInCustomer()||customerByEmail(email);if(!c){lookupPanel?.classList.remove("hidden");target.innerHTML='<section class="panel"><h2>No loyalty account found</h2></section>';return}if(!signedInCustomer())setCustomerSession(c);lookupPanel?.classList.add("hidden");if($("#loyaltyEmail"))$("#loyaltyEmail").value=c.email||"";updateCustomerSessionUi();const completed=c.appointments.filter(a=>a.status==="Completed").length,points=completed*100,next=1000,percent=Math.min(100,points%next/next*100),refCode=`ICU-${(c.firstName[0]||"X")}${(c.lastName[0]||"X")}${String(c.appointments.length).padStart(3,"0")}`;target.innerHTML=`<div class="profile-grid"><section class="profile-card"><h2>Rewards points</h2><div class="loyalty-ring" style="--loyalty:${percent}%"><strong>${points}</strong></div><p class="help" style="text-align:center">${next-(points%next)} points until the next reward</p></section><section class="profile-card"><h2>Membership</h2><p class="portal-badge">Standard Member</p><div class="profile-row"><span>Completed visits</span><strong>${completed}</strong></div><div class="profile-row"><span>Referral code</span><strong>${refCode}</strong></div><div class="profile-row"><span>Reward status</span><strong>${points>=1000?"Reward available":"Keep earning"}</strong></div><button class="button secondary" type="button" onclick="alert('Membership plans are ready for production payment integration.')">View membership plans</button></section></div>`}
-function createGiftCard(){const email=$("#giftEmail").value.trim(),recipient=$("#giftRecipient").value.trim(),amount=Number($("#giftAmount").value);if(!email||!recipient){toast("Enter recipient information.");return}const cards=loadKey(GIFTCARD_KEY,[]),code=`ICU-${Math.random().toString(36).slice(2,8).toUpperCase()}`;cards.push({code,email,recipient,balance:amount,createdAt:new Date().toISOString()});saveKey(GIFTCARD_KEY,cards);$("#giftBalanceResult").classList.remove("hidden");$("#giftBalanceResult").textContent=`Gift card ${code} created for ${money(amount)}.`}
-function checkGiftCard(){const code=$("#giftCode").value.trim().toUpperCase(),card=loadKey(GIFTCARD_KEY,[]).find(c=>c.code===code);$("#giftBalanceResult").classList.remove("hidden");$("#giftBalanceResult").textContent=card?`${card.recipient}'s balance is ${money(card.balance)}.`:"Gift card not found."}
+async function createGiftCard(){
+ const email=$("#giftEmail").value.trim(),recipient=$("#giftRecipient").value.trim(),amount=Number($("#giftAmount").value),result=$("#giftBalanceResult");
+ if(!email||!recipient){toast("Enter recipient information.");return}
+ try{const card=await ICUCloud.createGiftCardCloud(recipient,email,amount);const cards=loadKey(GIFTCARD_KEY,[]);cards.push(card);localStorage.setItem(GIFTCARD_KEY,JSON.stringify(cards));result.classList.remove("hidden");result.textContent=`Gift card ${card.code} created for ${money(card.amount)}.`}
+ catch(error){result.classList.remove("hidden");result.textContent=error?.message||"Gift card could not be created."}
+}
+async function checkGiftCard(){
+ const code=$("#giftCode").value.trim().toUpperCase(),result=$("#giftBalanceResult");result.classList.remove("hidden");
+ if(!code){result.textContent="Enter a gift-card code.";return}
+ try{const card=await ICUCloud.lookupGiftCardCloud(code);result.textContent=card?`${card.recipient}'s balance is ${money(card.balance)}.`:"Gift card not found."}
+ catch(error){result.textContent=error?.message||"Gift card lookup failed."}
+}
+
 function loadQueue(key){return loadKey(key,[])}function saveQueue(key,items){saveKey(key,items)}
 
 function renderOwnerCustomers(){const query=$("#ownerCustomerSearch").value.trim().toLowerCase(),segment=$("#ownerCustomerSegment").value,now=new Date();let clients=customerRecords().map(c=>({...c,daysSince:c.last?(now-new Date(c.last))/86400000:999}));if(query)clients=clients.filter(c=>`${c.firstName} ${c.lastName} ${c.email} ${c.phone} ${[...c.barbers].join(" ")}`.toLowerCase().includes(query));if(segment==="loyal")clients=clients.filter(c=>c.appointments.length>=5);if(segment==="inactive")clients=clients.filter(c=>c.daysSince>=30);if(segment==="weekly")clients=clients.filter(c=>{const dates=c.appointments.map(a=>new Date(a.startAt)).sort((a,b)=>a-b);if(dates.length<3)return false;const gaps=[];for(let i=1;i<dates.length;i++)gaps.push((dates[i]-dates[i-1])/86400000);const avg=gaps.reduce((a,b)=>a+b,0)/gaps.length;return avg>=5&&avg<=18});$("#ownerCustomerStats").innerHTML=[["Customers",clients.length],["Loyal",clients.filter(c=>c.appointments.length>=5).length],["Inactive 30+ days",clients.filter(c=>c.daysSince>=30).length],["Lifetime value",money(clients.reduce((s,c)=>s+c.total,0))]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#ownerCustomerList").innerHTML=clients.length?clients.map(c=>`<article class="appointment-card"><div class="date-badge"><small>Client</small><strong>${esc((c.firstName[0]||"")+(c.lastName[0]||""))}</strong></div><div class="appointment-main"><h3>${esc(c.firstName+" "+c.lastName)}</h3><p>${esc(c.email||"No email")} • ${esc(c.phone||"No phone")}</p><p class="help">${c.appointments.length} appointments • ${[...c.barbers].join(", ")} • Last visit ${Math.round(c.daysSince)} days ago</p></div><div class="appointment-side"><strong>${money(c.total)}</strong></div></article>`).join(""):'<section class="panel"><h2>No customers match</h2></section>'}
@@ -877,7 +910,7 @@ function renderOperations(){
  $("#walkinQueue").innerHTML=walkins.length?walkins.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(x=>`<div class="queue-item operations-item"><div class="operations-copy"><strong class="operations-title">${esc(x.name)}</strong><div class="operations-detail">${esc(serviceNames(x.serviceIds||[]))}</div><div class="operations-meta">${esc(x.barber||"Unassigned")} • ${esc(x.status)}${x.startAt?` • ${esc(formatDateTime(x.startAt))}`:""}</div></div><div class="queue-actions">${x.barber?`<button class="button secondary" data-walkin-status="${x.id}:In Chair">Start</button>`:""}<button class="button primary" data-walkin-status="${x.id}:Completed">Complete</button></div></div>`).join(""):'<p class="help">No walk-ins in the queue.</p>';
  $("#waitlist").innerHTML=wait.length?wait.map(x=>`<div class="queue-item operations-item"><div class="operations-copy"><strong class="operations-title">${esc(x.name)}</strong><div class="operations-detail">${esc(x.phone||"No phone")}</div><div class="operations-meta">${esc(x.date||"Any date")}</div></div><button class="button secondary" data-remove-wait="${x.id}">Remove</button></div>`).join(""):'<p class="help">Waiting list is empty.</p>';
  $("#maintenanceList").innerHTML=maintenance.length?maintenance.map(x=>`<div class="queue-item operations-item"><div class="operations-copy"><strong class="operations-title">${esc(x.item)}</strong><div class="operations-detail">${esc(x.note||"No note")}</div><div class="operations-meta">${esc(x.status)}</div></div><button class="button secondary" data-resolve-maint="${x.id}">Resolve</button></div>`).join(""):'<p class="help">No maintenance issues.</p>';
- $("#shopAnnouncement").value=localStorage.getItem(ANNOUNCEMENT_KEY)||"";$("#announcementPreview").textContent=localStorage.getItem(ANNOUNCEMENT_KEY)||"No active announcement.";renderWalkInEligibility()
+ $("#shopAnnouncement").value=loadKey(ANNOUNCEMENT_KEY,"")||"";$("#announcementPreview").textContent=loadKey(ANNOUNCEMENT_KEY,"")||"No active announcement.";renderWalkInEligibility()
 }
 function renderBarberWalkIns(){
  const barber=activeBarber(),date=$("#barberWalkinDate").value,status=$("#barberWalkinStatus").value;let items=walkInsForBarber(barber,date);if(status)items=items.filter(w=>w.status===status);
@@ -1054,20 +1087,18 @@ function moveAvailabilityWeek(offset){
  renderAvailability()
 }
 function renderTimeOff(){const barber=activeBarber(),items=loadKey(TIMEOFF_KEY,[]).filter(x=>x.barber===barber);$("#timeOffList").innerHTML=items.length?items.map(x=>`<div class="queue-item"><div><strong>${x.start} through ${x.end}</strong><span class="help">${esc(x.reason)}</span></div><button class="button secondary" data-timeoff-remove="${x.id}">Remove</button></div>`).join(""):'<p class="help">No time off scheduled.</p>'}
-function openSocialDb(){return new Promise((resolve,reject)=>{const request=indexedDB.open(SOCIAL_DB_NAME,1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains(SOCIAL_STORE))db.createObjectStore(SOCIAL_STORE,{keyPath:"id"})};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
 async function saveSocialFiles(files){
- const barber=activeBarber(),db=await openSocialDb(),tx=db.transaction(SOCIAL_STORE,"readwrite"),store=tx.objectStore(SOCIAL_STORE);
- [...files].forEach(file=>store.put({id:`media-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,barber,name:file.name||`Captured ${file.type.startsWith("video")?"Video":"Photo"}`,type:file.type,blob:file,platform:"",caption:"",hashtags:"",createdAt:new Date().toISOString()}));
- await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();await renderSocialMedia();toast("Media added to your private content library.")
+ if(!window.ICUCloud){toast("Cloud storage is unavailable.");return}
+ await ICUCloud.saveSocialFiles(files);await renderSocialMedia();toast("Media added to your private Supabase content library.")
 }
-async function getSocialMediaItems(){const barber=activeBarber(),db=await openSocialDb();return new Promise((resolve,reject)=>{const tx=db.transaction(SOCIAL_STORE,"readonly"),req=tx.objectStore(SOCIAL_STORE).getAll();req.onsuccess=()=>{db.close();resolve(req.result.filter(x=>x.barber===barber).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)))};req.onerror=()=>reject(req.error)})}
-async function updateSocialItem(id,changes){const db=await openSocialDb(),tx=db.transaction(SOCIAL_STORE,"readwrite"),store=tx.objectStore(SOCIAL_STORE),req=store.get(id);req.onsuccess=()=>store.put({...req.result,...changes});await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close()}
-async function deleteSocialItem(id){const db=await openSocialDb(),tx=db.transaction(SOCIAL_STORE,"readwrite");tx.objectStore(SOCIAL_STORE).delete(id);await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();await renderSocialMedia()}
+async function getSocialMediaItems(){return window.ICUCloud?await ICUCloud.socialItems():[]}
+async function updateSocialItem(id,changes){if(window.ICUCloud)await ICUCloud.updateSocial(id,changes)}
+async function deleteSocialItem(id){if(window.ICUCloud)await ICUCloud.deleteSocial(id);await renderSocialMedia()}
 async function renderSocialMedia(){
- if(!$("#socialMediaGrid"))return;const barber=activeBarber();$("#socialContentTitle").textContent=`${barber}'s Social Media Content`;const platform=$("#socialPlatformFilter").value,typeFilter=$("#socialTypeFilter").value;let items=await getSocialMediaItems();if(platform)items=items.filter(x=>x.platform===platform);if(typeFilter)items=items.filter(x=>x.type.startsWith(typeFilter));
+ if(!$("#socialMediaGrid"))return;const barber=activeBarber();$("#socialContentTitle").textContent=`${barber}'s Social Media Content`;const platform=$("#socialPlatformFilter").value,typeFilter=$("#socialTypeFilter").value;let items=[];try{items=await getSocialMediaItems()}catch(error){$("#socialMediaGrid").innerHTML=`<section class="panel"><h2>Cloud media unavailable</h2><p>${esc(error?.message||"Unable to load media.")}</p></section>`;return}if(platform)items=items.filter(x=>x.platform===platform);if(typeFilter)items=items.filter(x=>x.type.startsWith(typeFilter));
  $("#socialMediaGrid").innerHTML="";
- if(!items.length){$("#socialMediaGrid").innerHTML='<section class="panel"><h2>No media yet</h2><p>Take a photo/video or upload media from your device.</p></section>';return}
- items.forEach(item=>{const url=URL.createObjectURL(item.blob),card=document.createElement("article");card.className="social-media-card";card.dataset.mediaId=item.id;card.innerHTML=`<div class="social-preview">${item.type.startsWith("video")?`<video controls preload="metadata" src="${url}"></video>`:`<img src="${url}" alt="${esc(item.name)}">`}</div><div class="social-card-body"><label>Title<input class="social-title" value="${esc(item.name)}"></label><label>Platform<select class="social-platform"><option value="">Not assigned</option>${["TikTok","Instagram","Facebook","X/Twitter","YouTube"].map(p=>`<option ${p===item.platform?"selected":""}>${p}</option>`).join("")}</select></label><label>Caption<textarea class="social-caption">${esc(item.caption||"")}</textarea></label><label>Hashtags<input class="social-hashtags" value="${esc(item.hashtags||"")}" placeholder="#barber #freshcut"></label><p class="help">${esc(formatDateTime(item.createdAt))}</p><div class="social-card-actions">${item.type.startsWith("image")?`<button class="button primary" data-social-edit="${item.id}" type="button">Edit Image</button>`:""}<button class="button secondary" data-social-save="${item.id}" type="button">Save Details</button><button class="button secondary" data-social-download="${item.id}" type="button">Download</button><button class="button secondary" data-social-copy="${item.id}" type="button">Copy Caption</button><button class="button danger" data-social-delete="${item.id}" type="button">Delete</button></div></div>`;$("#socialMediaGrid").appendChild(card)})
+ if(!items.length){$("#socialMediaGrid").innerHTML='<section class="panel"><h2>No media yet</h2><p>Take a photo/video or upload media from your device. Files are stored privately in Supabase.</p></section>';return}
+ items.forEach(item=>{const url=URL.createObjectURL(item.blob),card=document.createElement("article");card.className="social-media-card";card.dataset.mediaId=item.id;card.innerHTML=`<div class="social-preview">${item.type.startsWith("video")?`<video controls preload="metadata" src="${url}"></video>`:`<img src="${url}" alt="${esc(item.name)}">`}</div><div class="social-card-body"><label>Title<input class="social-title" value="${esc(item.name)}"></label><label>Platform<select class="social-platform"><option value="">Not assigned</option>${["TikTok","Instagram","Facebook","X/Twitter","YouTube"].map(p=>`<option ${p===item.platform?"selected":""}>${p}</option>`).join("")}</select></label><label>Caption<textarea class="social-caption">${esc(item.caption||"")}</textarea></label><label>Hashtags<input class="social-hashtags" value="${esc(item.hashtags||"")}" placeholder="#barber #freshcut"></label><p class="help">${esc(formatDateTime(item.createdAt))} • Supabase Storage</p><div class="social-card-actions">${item.type.startsWith("image")?`<button class="button primary" data-social-edit="${item.id}" type="button">Edit Image</button>`:""}<button class="button secondary" data-social-save="${item.id}" type="button">Save Details</button><button class="button secondary" data-social-download="${item.id}" type="button">Download</button><button class="button secondary" data-social-copy="${item.id}" type="button">Copy Caption</button><button class="button danger" data-social-delete="${item.id}" type="button">Delete</button></div></div>`;$("#socialMediaGrid").appendChild(card)})
 }
 async function socialItemById(id){return(await getSocialMediaItems()).find(x=>x.id===id)}
 
@@ -1167,9 +1198,8 @@ async function exportEditedSocialImage(){
  const sx=img.width/canvas.width,sy=img.height/canvas.height;
  socialEditorState.layers.forEach(original=>{const layer={...original,x:original.x*sx,y:original.y*sy,size:original.size*((sx+sy)/2)};drawWrappedText(ctx,layer)});
  const blob=await new Promise(resolve=>exportCanvas.toBlob(resolve,"image/png",.95));if(!blob)return;
- const item=socialEditorState.sourceItem,db=await openSocialDb(),tx=db.transaction(SOCIAL_STORE,"readwrite"),store=tx.objectStore(SOCIAL_STORE);
- store.put({id:`media-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,barber:activeBarber(),name:($("#socialExportTitle").value.trim()||`Edited - ${item.name}`)+".png",type:"image/png",blob,platform:item.platform||"",caption:item.caption||"",hashtags:item.hashtags||"",createdAt:new Date().toISOString(),editedFrom:item.id});
- await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});db.close();$("#socialImageEditor").close();await renderSocialMedia();toast("Edited image saved as a new copy.")
+ const item=socialEditorState.sourceItem,name=($("#socialExportTitle").value.trim()||`Edited - ${item.name}`)+".png";
+ if(!window.ICUCloud){toast("Cloud storage is unavailable.");return}await ICUCloud.saveEditedSocial(item,blob,name);$("#socialImageEditor").close();await renderSocialMedia();toast("Edited image saved as a new cloud copy.")
 }
 
 function messageUser(){return appMode()==="owner"?"Owner":activeBarber()}
@@ -1199,7 +1229,7 @@ function conversationParticipants(key){
 function messageReadMap(){return loadKey(MESSAGE_READ_KEY,{})}
 function conversationLastRead(user,key){return Number(messageReadMap()[user]?.[key]||0)}
 function unreadForConversation(user,key){return conversationMessages(key).filter(m=>m.sender!==user&&new Date(m.createdAt).getTime()>conversationLastRead(user,key)).length}
-function markConversationRead(user,key){const reads=messageReadMap();reads[user]=reads[user]||{};reads[user][key]=Date.now();saveKey(MESSAGE_READ_KEY,reads);updateUnifiedNotifications()}
+function markConversationRead(user,key){const reads=messageReadMap();reads[user]=reads[user]||{};reads[user][key]=Date.now();localStorage.setItem(MESSAGE_READ_KEY,JSON.stringify(reads));window.ICUCloud?.markRead(key,user).catch(()=>{});updateUnifiedNotifications()}
 function accessibleConversationKeys(user){
  const keys=[];
  if(user==="Owner")BARBERS.forEach(b=>keys.push(directConversationKey("Owner",b)));
@@ -1239,17 +1269,18 @@ function renderOwnerMessages(){
 }
 function sendMessage(user,key,text){
  const body=text.trim();if(!body||!key||!userCanAccessConversation(user,key))return;
- const messages=loadMessages();
- if(key.startsWith("direct:")){const recipient=key.slice(7).split("|").find(name=>name!==user);messages.push({id:`msg-${Date.now()}`,type:"direct",sender:user,recipient,body,createdAt:new Date().toISOString()})}
- else messages.push({id:`msg-${Date.now()}`,type:"group",groupId:key.slice(6),sender:user,body,createdAt:new Date().toISOString()});
- saveMessages(messages);markConversationRead(user,key);window.dispatchEvent(new Event("icuMessagesChanged"))
+ const id=`msg-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,messages=loadMessages(),createdAt=new Date().toISOString();
+ if(key.startsWith("direct:")){const recipient=key.slice(7).split("|").find(name=>name!==user);messages.push({id,type:"direct",sender:user,recipient,body,createdAt})}
+ else messages.push({id,type:"group",groupId:key.slice(6),sender:user,body,createdAt});
+ localStorage.setItem(MESSAGES_KEY,JSON.stringify(messages));window.ICUCloud?.sendMessage(key,user,body).catch(error=>toast(error?.message||"Message could not be sent."));markConversationRead(user,key);window.dispatchEvent(new Event("icuMessagesChanged"))
 }
 function createGroupChat(creator){
  const name=prompt("Group chat name:");if(!name)return;
  const choices=["Owner",...BARBERS].filter(x=>x!==creator);const selected=prompt(`Enter participants separated by commas:\n${choices.join(", ")}`,"");
- if(!selected)return;const participants=[creator,...selected.split(",").map(x=>x.trim()).filter(x=>choices.includes(x))];const unique=[...new Set(participants)];
+ if(!selected)return;const participants=[creator,...selected.split(",").map(x=>x.trim()).filter(x=>choices.includes(x))],unique=[...new Set(participants)];
  if(unique.length<2){toast("Select at least one other participant.");return}
- const groups=loadMessageGroups();groups.push({id:`group-${Date.now()}`,name,participants:unique,createdBy:creator,createdAt:new Date().toISOString()});saveMessageGroups(groups);toast("Group chat created.");return groupConversationKey(groups.at(-1).id)
+ const id=`group-${Date.now()}`,groups=loadMessageGroups();groups.push({id,name,participants:unique,createdBy:creator,createdAt:new Date().toISOString()});localStorage.setItem(MESSAGE_GROUPS_KEY,JSON.stringify(groups));
+ window.ICUCloud?.createGroup(name,creator,unique.filter(x=>x!==creator),id).catch(error=>toast(error?.message||"Group chat could not be created."));toast("Group chat created.");return groupConversationKey(id)
 }
 function barberMarketingClients(){
  const barber=activeBarber(),audience=$("#barberMarketingAudience").value,service=$("#barberMarketingService").value,clients=marketingCustomers(audience==="service"?"loyal":audience,barber);
@@ -1327,14 +1358,21 @@ function barberLinkedHistory(name){
 }
 function canPermanentlyDeleteBarber(name){return name!=="Tony"&&barberLinkedHistory(name).total===0}
 
-function renderBarberManagement(){const t=$("#barberManagementList");t.innerHTML=loadBarberRoster().map(r=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${r.active?"Active":"Inactive"}</p><h2>${esc(r.name)}</h2></div><strong>${esc(r.role)}</strong></div><div class="field-grid"><label>License #<input data-roster-license="${r.id}" value="${esc(r.licenseNumber||"")}"></label><label>Expiration<input type="date" data-roster-exp="${r.id}" value="${esc(r.licenseExpiration||"")}"></label><label>Start date<input type="date" data-roster-start="${r.id}" value="${esc(r.startDate||"")}"></label><label>Original Review Group<select data-roster-cohort="${r.id}"><option value="yes" ${r.originalRatingCohort?"selected":""}>Yes</option><option value="no" ${!r.originalRatingCohort?"selected":""}>No</option></select></label></div><div class="social-card-actions"><button class="button secondary" data-save-roster="${r.id}">Save</button>${r.name!==OWNER_BARBER_NAME?`<button class="button ${r.active?"danger":"primary"}" data-toggle-roster="${r.id}">${r.active?"Deactivate":"Reactivate"}</button><button class="button danger" data-delete-roster="${r.id}">Delete Barber</button>`:""}</div></article>`).join("")}
+function renderBarberManagement(){
+ const t=$("#barberManagementList");
+ t.innerHTML=loadBarberRoster().map(r=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${r.pendingAuth?"Pending Login":r.active?"Active":"Inactive"}</p><h2>${esc(r.name)}</h2></div><strong>${esc(r.role)}</strong></div><div class="field-grid"><label>License #<input data-roster-license="${r.id}" value="${esc(r.licenseNumber||"")}"></label><label>Expiration<input type="date" data-roster-exp="${r.id}" value="${esc(r.licenseExpiration||"")}"></label><label>Start date<input type="date" data-roster-start="${r.id}" value="${esc(r.startDate||"")}"></label><label>Original Review Group<select data-roster-cohort="${r.id}"><option value="yes" ${r.originalRatingCohort?"selected":""}>Yes</option><option value="no" ${!r.originalRatingCohort?"selected":""}>No</option></select></label></div>${r.pendingAuth?'<p class="help">This barber is saved in Supabase as pending. Create/link the barber Auth account before activating customer booking.</p>':""}<div class="social-card-actions"><button class="button secondary" data-save-roster="${r.id}">Save</button>${r.name!==OWNER_BARBER_NAME&&!r.pendingAuth?`<button class="button ${r.active?"danger":"primary"}" data-toggle-roster="${r.id}">${r.active?"Deactivate":"Reactivate"}</button>`:""}${r.name!==OWNER_BARBER_NAME?`<button class="button danger" data-delete-roster="${r.id}">Delete Barber</button>`:""}</div></article>`).join("")
+}
+
 function renderOwnerDiary(){const p=loadBarberRoster();$("#diaryPerson").innerHTML=p.map(r=>`<option>${esc(r.name)}</option>`).join("");if(!$("#diaryDate").value)$("#diaryDate").value=today();if(!$("#diaryTime").value)$("#diaryTime").value=new Date().toTimeString().slice(0,5);const person=$("#diaryPerson").value,cat=$("#diaryCategoryFilter").value,kw=$("#diaryKeyword").value.trim().toLowerCase();let items=loadKey(OWNER_DIARY_KEY,[]).filter(x=>x.person===person);if(cat)items=items.filter(x=>x.category===cat);if(kw)items=items.filter(x=>JSON.stringify(x).toLowerCase().includes(kw));items.sort((a,b)=>new Date(b.eventAt)-new Date(a.eventAt));$("#diaryHistory").innerHTML=items.length?items.map(x=>`<div class="queue-item"><div><strong>${esc(x.subject||x.category)}</strong><span class="help">Event: ${esc(formatDateTime(x.eventAt))} • Entered: ${esc(formatDateTime(x.createdAt))}</span>${x.type==="conversation_snapshot"?`<details><summary>Conversation transcript (${x.transcript.length} messages)</summary>${x.transcript.map(m=>`<div class="message-bubble"><strong>${esc(m.sender)}</strong><p>${esc(m.text)}</p><small>${esc(formatDateTime(m.createdAt))}</small></div>`).join("")}</details>`:`<p>${esc(x.note||"")}</p>`}</div></div>`).join(""):'<p class="help">No diary entries for this person.</p>'}
 function renderIncidents(){const items=loadKey(INCIDENTS_KEY,[]).sort((a,b)=>new Date(b.occurredAt)-new Date(a.occurredAt));$("#incidentList").innerHTML=items.length?items.map(x=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${esc(x.status)}</p><h2>${esc(x.title)}</h2></div><strong>${esc(formatDateTime(x.occurredAt))}</strong></div><p>${esc(x.description)}</p><p class="help">People: ${esc(x.people||"")} • Witnesses: ${esc(x.witnesses||"")}</p><p><strong>Actions:</strong> ${esc(x.actions||"")}</p><button class="button secondary" data-close-incident="${x.id}">Mark Closed</button></article>`).join(""):'<section class="panel"><p>No incident reports.</p></section>'}
 function renderInspections(){const r=activeBarberRoster();$("#inspectionRoster").innerHTML=`<table><thead><tr><th>Barber</th><th>License #</th><th>Expiration</th><th>Start Date</th></tr></thead><tbody>${r.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.licenseNumber||"Not entered")}</td><td>${esc(x.licenseExpiration||"Not entered")}</td><td>${esc(x.startDate||"Not entered")}</td></tr>`).join("")}</tbody></table>`;const items=loadKey(INSPECTIONS_KEY,[]).sort((a,b)=>new Date(b.inspectedAt)-new Date(a.inspectedAt));$("#inspectionHistory").innerHTML=items.map(i=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${esc(i.status)}</p><h2>${esc(i.agency)}</h2></div><strong>${esc(formatDateTime(i.inspectedAt))}</strong></div><p>${esc(i.summary)}</p></article>`).join("")||'<section class="panel"><p>No inspections recorded.</p></section>'}
 function renderInspectionIssues(){const items=loadKey(INSPECTION_ISSUES_KEY,[]).sort((a,b)=>(a.status==="Resolved")-(b.status==="Resolved"));$("#inspectionIssueList").innerHTML=items.length?items.map(i=>`<article class="performance-card ${i.status!=="Resolved"?"inspection-open":""}"><div class="performance-head"><div><p class="eyebrow">${esc(i.status)}</p><h2>${esc(i.title)}</h2></div><strong>${esc(i.dueDate||"No due date")}</strong></div><p>${esc(i.description)}</p>${i.status!=="Resolved"?`<label>Corrective action<textarea data-issue-resolution="${i.id}"></textarea></label><button class="button primary" data-resolve-issue="${i.id}">Resolve Issue</button>`:`<p><strong>Resolution:</strong> ${esc(i.resolution||"")}</p>`}</article>`).join(""):'<section class="panel"><p>No inspection issues.</p></section>'}
 function checklistDefinitions(){return{Opening:["Unlock/open customer areas","Check restroom condition","Sanitize stations","Verify appointment schedule","Check waiting area"],Closing:["Disinfect stations","Remove trash","Secure equipment","Check restroom","Lock/secure shop"],Sanitation:["Disinfect tools","Clean chairs/work surfaces","Restock sanitation supplies","Sweep/mop as needed","Verify clean capes/towels"]}}
 function renderChecklists(){const defs=checklistDefinitions(),saved=loadKey(CHECKLISTS_KEY,[]),date=today();$("#checklistWorkspace").innerHTML=Object.entries(defs).map(([name,tasks])=>`<section class="panel"><h2>${name}</h2>${tasks.map((task,idx)=>{const rec=saved.find(x=>x.date===date&&x.type===name&&x.task===task);return`<label class="checklist-row"><input type="checkbox" data-checklist="${name}|${idx}" ${rec?.completed?"checked":""}><span>${esc(task)}</span>${rec?.completed?`<small>${esc(formatDateTime(rec.completedAt))}</small>`:""}</label>`}).join("")}</section>`).join("")}
-function renderDocuments(){const items=loadKey(DOCUMENTS_KEY,[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));$("#documentList").innerHTML=items.map(d=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${esc(d.category||"Document")}</p><h2>${esc(d.name)}</h2></div><strong>${esc(formatDateTime(d.createdAt))}</strong></div><p class="help">${esc(d.note||"")}</p></article>`).join("")||'<section class="panel"><p>No documents indexed yet.</p></section>'}
+function renderDocuments(){
+ const items=loadKey(DOCUMENTS_KEY,[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+ $("#documentList").innerHTML=items.map(d=>`<article class="performance-card"><div class="performance-head"><div><p class="eyebrow">${esc(d.category||"Document")}</p><h2>${esc(d.name)}</h2></div><strong>${esc(formatDateTime(d.createdAt))}</strong></div><p class="help">${esc(d.note||"")}</p>${d.storagePath?`<p class="help">${d.size?`${Math.max(1,Math.round(d.size/1024))} KB • `:""}Private Supabase Storage</p><div class="social-card-actions"><button class="button secondary" type="button" data-owner-document-download="${esc(d.id)}">Download</button><button class="button danger" type="button" data-owner-document-delete="${esc(d.id)}">Delete</button></div>`:"<p class=\"help\">Legacy metadata record — no cloud file attached.</p>"}</article>`).join("")||'<section class="panel"><p>No documents uploaded yet.</p></section>'
+}
 function renderAudit(){const items=loadKey(AUDIT_KEY,[]).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,300);$("#auditList").innerHTML=items.map(a=>`<div class="queue-item"><div><strong>${esc(a.action)}</strong><span class="help">${esc(a.actor)} • ${esc(formatDateTime(a.createdAt))}</span><p>${esc(a.details||"")}</p></div></div>`).join("")||'<p class="help">No audit entries.</p>'}
 function renderSystemHealth(){$("#systemHealthCards").innerHTML=systemHealth().map(x=>`<article class="performance-card"><div class="performance-head"><h2>${esc(x.name)}</h2><strong>${esc(x.status)}</strong></div><p>${esc(x.detail)}</p></article>`).join("")}
 function renderCameras(){const defs=loadKey(CAMERA_CONFIG_KEY,["Front Entrance","Waiting Area","Barber Floor","Camera 4"].map((n,i)=>({id:i+1,name:n,status:"Not Connected"})));$("#cameraGrid").innerHTML=defs.map(c=>`<article class="camera-card"><div class="camera-preview">LIVE FEED PLACEHOLDER</div><div class="camera-card-body"><strong>${esc(c.name)}</strong><span class="status">${esc(c.status)}</span><button class="button secondary" disabled>Full Screen (after integration)</button></div></article>`).join("")}
@@ -1361,7 +1399,34 @@ function renderGrowth(){
 function renderBusinessReports(){const a=loadAppointments(),pos=loadKey(POS_TRANSACTIONS_KEY,[]),walk=loadQueue(WALKIN_KEY),completed=a.filter(x=>x.status==="Completed"),cancelled=a.filter(x=>x.status==="Cancelled"),lastSecond=a.filter(x=>x.status==="Last Second Cancellation"),noshow=a.filter(x=>x.status==="No Show"),rev=pos.reduce((s,t)=>s+Number(t.amountCollected||0)+Number(t.depositApplied||0),0);$("#businessReportCards").innerHTML=[["Completed",completed.length],["Cancelled",cancelled.length],["Last Second Cancellations",lastSecond.length],["No Shows",noshow.length],["POS Revenue",money(rev)]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#businessReportHighlights").innerHTML=[`Appointments: ${a.length}`,`Walk-ins: ${walk.length}`,`POS transactions: ${pos.length}`,`Deposits: ${loadKey(DEPOSIT_PAYMENTS_KEY,[]).length}`].map(x=>`<div class="queue-item"><div><strong>${esc(x)}</strong></div></div>`).join("")}
 
 function renderPayments(){const date=$("#paymentDate").value,barber=$("#paymentBarber").value;let items=loadAppointments().filter(a=>a.status==="Completed"&&(!date||a.startAt.startsWith(date))&&(!barber||a.barber===barber));const payments=loadKey(PAYMENTS_KEY,{});const totals=items.reduce((sum,a)=>sum+customerTotalForAppointment(a),0),tips=items.reduce((sum,a)=>sum+Number(payments[a.id]?.tip||0),0);$("#paymentCards").innerHTML=[["Transactions",items.length],["Service revenue",money(totals)],["Tips",money(tips)],["Total collected",money(totals+tips)]].map(([l,v])=>`<div class="stat"><span>${l}</span><strong>${v}</strong></div>`).join("");$("#paymentList").innerHTML=items.length?items.map(a=>{const pay=payments[a.id]||{method:"Card",tip:0};return`<article class="appointment-card"><div class="date-badge"><small>Paid</small><strong>$</strong></div><div class="appointment-main"><h3>${esc(a.firstName+" "+a.lastName)}</h3><p>${esc(serviceNames(a.serviceIds))} with ${esc(a.barber)}</p><p class="help">${esc(pay.method)} • Receipt ${a.id.slice(-6)}</p></div><div class="appointment-side"><label>Tip<input data-tip-id="${a.id}" type="number" min="0" step="1" value="${(pay.tip/100).toFixed(2)}"></label><strong>${money(customerTotalForAppointment(a)+pay.tip)}</strong><button class="button secondary" data-receipt-id="${a.id}">Receipt</button></div></article>`}).join(""):'<section class="panel"><h2>No completed transactions</h2></section>'}
+
+async function renderAccountSecurity(){
+ const box=$("#securityIdentity"),panel=$("#ownerRecoveryPanel"),list=$("#ownerRecoveryList");
+ try{
+   const cur=await window.ICUAuth?.current();if(!cur){if(box)box.textContent="Not signed in.";return}
+   const role=cur.identity.role==="owner"?"Owner":`Barber — ${cur.identity.display_name||""}`;
+   if(box)box.innerHTML=`<strong>${esc(cur.user.email||"Signed-in staff account")}</strong><br><span class="help">${esc(role)} • Supabase Auth</span>`;
+   if(panel)panel.classList.toggle("hidden",cur.identity.role!=="owner");
+   if(cur.identity.role==="owner"&&list&&window.ICUCloud){
+     const {data,error}=await ICUCloud.client.from("barbers").select("id,display_name,is_owner,account_locked,must_change_password,active").order("display_name");
+     if(error)throw error;
+     list.innerHTML=(data||[]).map(b=>`<div class="queue-item"><div><strong>${esc(b.display_name)}</strong><span class="help">${b.is_owner?"Owner / Barber":"Barber"} • ${b.account_locked?"Locked":"Active"}${b.must_change_password?" • Password change required":""}</span></div><div class="social-card-actions">${!b.is_owner?`<button class="button ${b.account_locked?"primary":"danger"}" type="button" data-recovery-action="${b.account_locked?"unlock":"lock"}" data-recovery-barber="${b.id}">${b.account_locked?"Unlock":"Lock"}</button>`:""}<button class="button secondary" type="button" data-recovery-action="force_password_change" data-recovery-barber="${b.id}">Require Password Change</button></div></div>`).join("");
+   }
+ }catch(error){if(box)box.textContent=error?.message||"Unable to load account security."}
+}
+async function changeMyPassword(){
+ const current=$("#securityCurrentPassword").value,newPassword=$("#securityNewPassword").value,confirmPassword=$("#securityConfirmPassword").value,status=$("#securityPasswordStatus"),button=$("#securityChangePassword");
+ if(!current){status.textContent="Enter your current password.";return}
+ if(newPassword.length<8){status.textContent="New password must be at least 8 characters.";return}
+ if(newPassword!==confirmPassword){status.textContent="The new passwords do not match.";return}
+ button.disabled=true;status.textContent="Updating password…";
+ try{await ICUAuth.changePasswordVerified(current,newPassword);$("#securityCurrentPassword").value="";$("#securityNewPassword").value="";$("#securityConfirmPassword").value="";status.textContent="Password changed successfully.";toast("Password changed successfully.")}
+ catch(error){status.textContent=error?.message||"Password could not be changed."}
+ finally{button.disabled=false}
+}
+
 function renderCurrentView(name){
+ if(name==="account-security")renderAccountSecurity();
  if(name==="owner-control-center")renderOwnerControlCenter();
  if(name==="owner-barber-management")renderBarberManagement();
  if(name==="owner-diary")renderOwnerDiary();
@@ -1453,7 +1518,8 @@ function applyOwnerWorkspaceNavigation(){
 function openOwnerHome(){ownerViewHistory=[];sessionStorage.setItem("icuAppMode","owner");sessionStorage.setItem("icuBarberName","Tony");setOwnerWorkspace("home");showView("owner-dashboard",true,true)}
 function openOwnerManagement(){ownerViewHistory=[];sessionStorage.setItem("icuAppMode","owner");sessionStorage.setItem("icuBarberName","Tony");setOwnerWorkspace("management");showView("owner-dashboard",true,true)}
 function openTonyBarberWorkspace(){ownerViewHistory=[];sessionStorage.setItem("icuAppMode","owner");sessionStorage.setItem("icuBarberName","Tony");setOwnerWorkspace("tony");showView("barber-dashboard",true,true)}
-function init(){
+async function init(){
+ if(window.ICUCloud){const ok=await ICUCloud.bootstrap(appMode());if(ok===false&&["owner","individual"].includes(appMode()))return;if(ok===false)toast("Cloud connection unavailable. Showing cached data.")}
  $("#customerBackButton")?.addEventListener("click",customerGoBack);
  const launcherPhone=localStorage.getItem("icuLauncherPhone");if(launcherPhone){setCustomerSession(launcherPhone);if($("#customerProfileEmail"))$("#customerProfileEmail").value=launcherPhone;localStorage.removeItem("icuLauncherPhone");setTimeout(renderCustomerProfile,0)}const newClientPhone=localStorage.getItem("icuNewClientPhone");if(newClientPhone&&$("#phone")){$("#phone").value=formatPhone(newClientPhone);localStorage.removeItem("icuNewClientPhone")}updateCustomerSessionUi()
  const more=$("#barberMoreButton"),bn=$("#barberNav");if(more)more.onclick=()=>{const open=bn.classList.toggle("mobile-more-open");more.setAttribute("aria-expanded",String(open));};bn?.addEventListener("click",e=>{if(e.target.closest("[data-view-link]")){bn.classList.remove("mobile-more-open");more?.setAttribute("aria-expanded","false");}});const ownerMore=$("#ownerMoreButton"),on=$("#ownerNav");if(ownerMore)ownerMore.onclick=()=>{const open=on.classList.toggle("owner-mobile-more-open");ownerMore.setAttribute("aria-expanded",String(open));};on?.addEventListener("click",e=>{if(e.target.closest("[data-view-link]")){on.classList.remove("owner-mobile-more-open");ownerMore?.setAttribute("aria-expanded","false");}});
@@ -1481,14 +1547,14 @@ function init(){
  $("#addLocationButton").addEventListener("click",()=>{const name=prompt("Future location name:");if(!name)return;const items=loadLocations();items.push({id:`location-${Date.now()}`,name,status:"Future",revenue:0,customers:0,barbers:0});saveLocations(items);renderLocations()});
  $("#assistantAskButton").addEventListener("click",()=>askAssistant($("#assistantQuestion").value));$("#assistantQuestion").addEventListener("keydown",event=>{if(event.key==="Enter")askAssistant($("#assistantQuestion").value)});$$("[data-question]").forEach(button=>button.addEventListener("click",()=>askAssistant(button.dataset.question)));
  $("#customerProfileEmail").value="";$("#loyaltyEmail").value="";$("#paymentDate").value=today();BARBERS.forEach(b=>$("#paymentBarber").append(new Option(b,b)));
- $("#loadCustomerProfile").addEventListener("click",renderCustomerProfile);$("#customerProfileEmail").addEventListener("input",e=>{if(/^\D*\d/.test(e.target.value)&&!e.target.value.includes("@"))applyPhoneMask(e.target)});$("#loadLoyalty").addEventListener("click",renderLoyalty);$("#customerSignOutButton")?.addEventListener("click",()=>{clearCustomerSession();location.href="CLIENT_LAUNCHER.html"});$("#customerExitButton")?.addEventListener("click",()=>clearCustomerSession());$("#createGiftCard").addEventListener("click",createGiftCard);$("#checkGiftCard").addEventListener("click",checkGiftCard);
+ $("#loadCustomerProfile").addEventListener("click",async()=>{const value=$("#customerProfileEmail").value.trim(),phone=normalizePhone(value);if(phone.length===10&&window.ICUCloud){try{const cloudAppointments=await ICUCloud.customerLookup(phone);if(Array.isArray(cloudAppointments)&&cloudAppointments.length){const blocked=loadAppointments().filter(a=>!normalizePhone(a.phone)&&!a.email),merged=[...blocked];cloudAppointments.forEach(a=>{if(!merged.some(x=>x.id===a.id))merged.push(a)});localStorage.setItem(APPOINTMENTS_KEY,JSON.stringify(merged));setCustomerSession(phone)}}catch(error){toast(error?.message||"Profile lookup failed.")}}renderCustomerProfile()});$("#customerProfileEmail").addEventListener("input",e=>{if(/^\D*\d/.test(e.target.value)&&!e.target.value.includes("@"))applyPhoneMask(e.target)});$("#loadLoyalty").addEventListener("click",renderLoyalty);$("#customerSignOutButton")?.addEventListener("click",()=>{clearCustomerSession();location.href="CLIENT_LAUNCHER.html"});$("#customerExitButton")?.addEventListener("click",()=>clearCustomerSession());$("#createGiftCard").addEventListener("click",createGiftCard);$("#checkGiftCard").addEventListener("click",checkGiftCard);
  ["ownerCustomerSearch","ownerCustomerSegment"].forEach(id=>$("#"+id).addEventListener(id==="ownerCustomerSearch"?"input":"change",renderOwnerCustomers));
  $("#addWalkin").addEventListener("click",()=>{const item=createWalkInFromPrompts("");if(!item)return;const items=loadQueue(WALKIN_KEY);items.push(item);saveQueue(WALKIN_KEY,items);renderOperations();updateUnifiedNotifications()});
  $("#barberAddWalkin").addEventListener("click",()=>{const item=createWalkInFromPrompts(activeBarber());if(!item)return;const items=loadQueue(WALKIN_KEY);items.push(item);saveQueue(WALKIN_KEY,items);renderBarberWalkIns();updateUnifiedNotifications()});
  ["barberWalkinDate","barberWalkinStatus"].forEach(id=>$("#"+id).addEventListener("change",renderBarberWalkIns));
  $("#addWaitlist").addEventListener("click",()=>{const name=prompt("Customer name:");if(!name)return;const phone=prompt("Phone number:","")||"",date=prompt("Preferred date (optional):","")||"";const items=loadQueue(WAITLIST_KEY);items.push({id:`wait-${Date.now()}`,name,phone,date});saveQueue(WAITLIST_KEY,items);renderOperations()});
  $("#addMaintenance").addEventListener("click",()=>{const item=prompt("Equipment or issue:");if(!item)return;const note=prompt("Description:","")||"";const items=loadQueue(MAINTENANCE_KEY);items.push({id:`maint-${Date.now()}`,item,note,status:"Open"});saveQueue(MAINTENANCE_KEY,items);renderOperations()});
- $("#saveAnnouncement").addEventListener("click",()=>{localStorage.setItem(ANNOUNCEMENT_KEY,$("#shopAnnouncement").value);renderOperations();toast("Announcement published.")});
+ $("#saveAnnouncement").addEventListener("click",()=>{saveKey(ANNOUNCEMENT_KEY,$("#shopAnnouncement").value);renderOperations();toast("Announcement published.")});
  document.addEventListener("click",e=>{let b=e.target.closest("[data-walkin-status]");if(b){const[id,status]=b.dataset.walkinStatus.split(":");const items=loadQueue(WALKIN_KEY),x=items.find(v=>v.id===id);if(x)x.status=status;saveQueue(WALKIN_KEY,items);renderOperations()}b=e.target.closest("[data-remove-wait]");if(b){saveQueue(WAITLIST_KEY,loadQueue(WAITLIST_KEY).filter(x=>x.id!==b.dataset.removeWait));renderOperations()}b=e.target.closest("[data-resolve-maint]");if(b){const items=loadQueue(MAINTENANCE_KEY),x=items.find(v=>v.id===b.dataset.resolveMaint);if(x)x.status="Resolved";saveQueue(MAINTENANCE_KEY,items);renderOperations()}b=e.target.closest("[data-timeoff-remove]");if(b){saveKey(TIMEOFF_KEY,loadKey(TIMEOFF_KEY,[]).filter(x=>x.id!==b.dataset.timeoffRemove));renderTimeOff()}b=e.target.closest("[data-receipt-id]");if(b)alert(`Receipt ${b.dataset.receiptId.slice(-6)}\\nICU Lookin Barber Studio\\nThank you for your business.`)});
  $("#exportPayroll").addEventListener("click",()=>{
  const rows=[["Barber","Role","Schedule","Booth Rent","Gross Revenue"]];
@@ -1538,134 +1604,79 @@ function init(){
  $("#barberPreviewCampaign").addEventListener("click",()=>{const clients=barberMarketingClients();$("#barberCampaignPreview").classList.remove("hidden");$("#barberCampaignPreview").innerHTML=`<strong>${esc($("#barberCampaignName").value)} — ${clients.length} recipients</strong><p>${esc($("#barberCampaignMessage").value)} ${esc($("#barberCampaignOffer").value)}</p>`});
  window.addEventListener("icuMessagesChanged",()=>{updateUnifiedNotifications();if(appMode()==="individual"&&!$("#view-barber-messages").classList.contains("hidden"))renderBarberMessages();if(appMode()==="owner"&&!$("#view-owner-messages").classList.contains("hidden"))renderOwnerMessages()});
  window.addEventListener("storage",e=>{if([APPOINTMENTS_KEY,WALKIN_KEY,MESSAGES_KEY,MESSAGE_GROUPS_KEY,MESSAGE_READ_KEY].includes(e.key))updateUnifiedNotifications()});
- $("#agreeHairScalpPolicy")?.addEventListener("click",agreeHairScalpPolicy);$("#barberSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href=appMode()==="owner"?"OWNER_LAUNCHER.html":"BARBER_LAUNCHER.html"});$("#ownerSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href="OWNER_LAUNCHER.html"});
+ $("#ownerDocumentUpload")?.addEventListener("change",async e=>{const files=e.target.files;if(!files?.length)return;try{const uploaded=await ICUCloud.uploadOwnerDocuments(files),items=loadKey(DOCUMENTS_KEY,[]);items.push(...uploaded);saveKey(DOCUMENTS_KEY,items);renderDocuments();audit("Documents uploaded",uploaded.map(x=>x.name).join(", "));toast(`${uploaded.length} document${uploaded.length===1?"":"s"} uploaded to Supabase.`)}catch(error){toast(error?.message||"Document upload failed.")}finally{e.target.value=""}});
+ $("#agreeHairScalpPolicy")?.addEventListener("click",agreeHairScalpPolicy);$("#securityChangePassword")?.addEventListener("click",changeMyPassword);$("#barberSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href=appMode()==="owner"?"OWNER_LAUNCHER.html":"BARBER_LAUNCHER.html"});$("#ownerSignOutButton")?.addEventListener("click",async()=>{if(window.ICUAuth)await ICUAuth.signOut();location.href="OWNER_LAUNCHER.html"});
  configureMode();
 }
 document.addEventListener("input",e=>{if(e.target.matches('input[type="tel"]'))applyPhoneMask(e.target)});
 
 document.addEventListener("click",e=>{const d=e.target.closest("[data-directions]");if(d){window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(SHOP.address)}`,"_blank","noopener");return}const r=e.target.closest("[data-review-respond]");if(r){const all=loadReviews(),x=all.find(v=>v.id===r.dataset.reviewRespond),t=document.querySelector(`[data-review-response="${x.id}"]`);if(t&&t.value.trim()){x.response=t.value.trim();saveReviews(all);renderBarberReviews()}return}const s=e.target.closest("[data-bcm-send]");if(s){const i=document.querySelector(`[data-bcm-input="${s.dataset.bcmSend}"]`);if(i&&i.value.trim()){sendAppointmentMessage(s.dataset.bcmSend,activeBarber(),i.value);renderBarberClientMessages()}return}});
+document.addEventListener("click",async e=>{
+ const download=e.target.closest("[data-owner-document-download]"),del=e.target.closest("[data-owner-document-delete]");if(!download&&!del)return;
+ const id=(download||del).dataset.ownerDocumentDownload||(download||del).dataset.ownerDocumentDelete,items=loadKey(DOCUMENTS_KEY,[]),doc=items.find(x=>x.id===id);if(!doc||!doc.storagePath)return;
+ try{
+   if(download){await ICUCloud.downloadOwnerDocument(doc.storagePath,doc.originalName||doc.name);return}
+   if(del&&confirm(`Delete ${doc.name} from the private Document Center?`)){await ICUCloud.deleteOwnerDocument(doc.storagePath);saveKey(DOCUMENTS_KEY,items.filter(x=>x.id!==id));renderDocuments();audit("Document deleted",doc.name);toast("Document deleted.")}
+ }catch(error){toast(error?.message||"Document action failed.")}
+});
 document.addEventListener("DOMContentLoaded",init);
 
 
 /* ============================================================
-   v0.17.1 HOTFIX — BARBER MANAGEMENT ACTIONS
+   BARBER MANAGEMENT — SUPABASE-BACKED ACTIONS
    ============================================================ */
-document.addEventListener("click", function(event){
-
-  const addButton = event.target.closest("#addBarberBtn");
+document.addEventListener("click", async function(event){
+  const addButton=event.target.closest("#addBarberBtn");
   if(addButton){
-    const name = (prompt("New barber name:") || "").trim();
-    if(!name) return;
-
-    const items = loadBarberRoster();
-
-    if(items.some(item => item.name.toLowerCase() === name.toLowerCase())){
-      toast("That barber is already in Barber Management.");
-      return;
-    }
-
-    const startDate = prompt("Starting date (YYYY-MM-DD):", today()) || today();
-    const licenseNumber = (prompt("Barber license number (optional for now):", "") || "").trim();
-    const licenseExpiration = prompt("License expiration date (YYYY-MM-DD, optional):", "") || "";
-
-    items.push({
-      id: `barber-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
-      name,
-      active: true,
-      originalRatingCohort: false,
-      newBarber: true,
-      startDate,
-      licenseNumber,
-      licenseExpiration,
-      role: "Barber",
-      createdAt: new Date().toISOString()
-    });
-
-    saveBarberRoster(items);
-
-    if(typeof audit === "function"){
-      audit("New barber added", `${name} added to the active roster.`);
-    }
-
-    renderBarberManagement();
-    toast(`${name} was added as a new barber.`);
-    return;
+    const name=(prompt("New barber name:")||"").trim();if(!name)return;
+    const items=loadBarberRoster();
+    if(items.some(item=>item.name.toLowerCase()===name.toLowerCase())){toast("That barber is already in Barber Management.");return}
+    const startDate=prompt("Starting date (YYYY-MM-DD):",today())||today();
+    const licenseNumber=(prompt("Barber license number (optional for now):","")||"").trim();
+    const licenseExpiration=prompt("License expiration date (YYYY-MM-DD, optional):","")||"";
+    try{
+      const result=await ICUCloud.ownerManageBarber("create_pending",{display_name:name,start_date:startDate,license_number:licenseNumber,license_expires_on:licenseExpiration||null});
+      items.push({id:`barber-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,cloudBarberId:result.barber?.id||"",name,active:false,pendingAuth:true,originalRatingCohort:false,newBarber:true,startDate,licenseNumber,licenseExpiration,role:"Barber",createdAt:new Date().toISOString()});
+      saveBarberRoster(items);audit("New barber added",`${name} added as a pending Supabase barber.`);renderBarberManagement();toast(`${name} was added. A login must be linked before activation.`)
+    }catch(error){toast(error?.message||"Barber could not be added.")}
+    return
   }
 
-  const saveButton = event.target.closest("[data-save-roster]");
+  const saveButton=event.target.closest("[data-save-roster]");
   if(saveButton){
-    const id = saveButton.dataset.saveRoster;
-    const items = loadBarberRoster();
-    const barber = items.find(item => item.id === id);
-
-    if(!barber) return;
-
-    const license = document.querySelector(`[data-roster-license="${id}"]`);
-    const expiration = document.querySelector(`[data-roster-exp="${id}"]`);
-    const start = document.querySelector(`[data-roster-start="${id}"]`);
-    const cohort = document.querySelector(`[data-roster-cohort="${id}"]`);
-
-    barber.licenseNumber = license ? license.value.trim() : barber.licenseNumber;
-    barber.licenseExpiration = expiration ? expiration.value : barber.licenseExpiration;
-    barber.startDate = start ? start.value : barber.startDate;
-    barber.originalRatingCohort = cohort ? cohort.value === "yes" : barber.originalRatingCohort;
-
-    saveBarberRoster(items);
-
-    if(typeof audit === "function"){
-      audit("Barber record updated", `${barber.name}'s Barber Management record was updated.`);
-    }
-
-    renderBarberManagement();
-    toast(`${barber.name}'s record was saved.`);
-    return;
+    const id=saveButton.dataset.saveRoster,items=loadBarberRoster(),barber=items.find(item=>item.id===id);if(!barber)return;
+    const license=document.querySelector(`[data-roster-license="${id}"]`),expiration=document.querySelector(`[data-roster-exp="${id}"]`),startInput=document.querySelector(`[data-roster-start="${id}"]`),cohort=document.querySelector(`[data-roster-cohort="${id}"]`);
+    const next={licenseNumber:license?license.value.trim():barber.licenseNumber,licenseExpiration:expiration?expiration.value:barber.licenseExpiration,startDate:startInput?startInput.value:barber.startDate,originalRatingCohort:cohort?cohort.value==="yes":barber.originalRatingCohort};
+    try{
+      await ICUCloud.ownerManageBarber("update_record",{barber_id:barber.cloudBarberId||undefined,display_name:barber.name,start_date:next.startDate||null,license_number:next.licenseNumber||"",license_expires_on:next.licenseExpiration||null});
+      Object.assign(barber,next);saveBarberRoster(items);audit("Barber record updated",`${barber.name}'s Barber Management record was updated.`);renderBarberManagement();toast(`${barber.name}'s record was saved.`)
+    }catch(error){toast(error?.message||"Barber record could not be saved.")}
+    return
   }
 
-  const toggleButton = event.target.closest("[data-toggle-roster]");
+  const toggleButton=event.target.closest("[data-toggle-roster]");
   if(toggleButton){
-    const id = toggleButton.dataset.toggleRoster;
-    const items = loadBarberRoster();
-    const barber = items.find(item => item.id === id);
-
-    if(!barber) return;
-
-    const action = barber.active ? "deactivate" : "reactivate";
-
-    if(!confirm(`${action === "deactivate" ? "Deactivate" : "Reactivate"} ${barber.name}?`)){
-      return;
-    }
-
-    barber.active = !barber.active;
-    barber.deactivatedAt = barber.active ? null : new Date().toISOString();
-
-    saveBarberRoster(items);
-
-    if(typeof audit === "function"){
-      audit(
-        barber.active ? "Barber reactivated" : "Barber deactivated",
-        barber.name
-      );
-    }
-
-    renderBarberManagement();
-    toast(`${barber.name} is now ${barber.active ? "active" : "inactive"}.`);
-    return;
+    const id=toggleButton.dataset.toggleRoster,items=loadBarberRoster(),barber=items.find(item=>item.id===id);if(!barber)return;
+    const action=barber.active?"deactivate":"reactivate";
+    if(!confirm(`${action==="deactivate"?"Deactivate":"Reactivate"} ${barber.name}?`))return;
+    try{
+      await ICUCloud.ownerManageBarber(action,{barber_id:barber.cloudBarberId||undefined,display_name:barber.name});
+      barber.active=!barber.active;barber.deactivatedAt=barber.active?null:new Date().toISOString();saveBarberRoster(items);audit(barber.active?"Barber reactivated":"Barber deactivated",barber.name);await ICUCloud.refreshStaff();renderBarberManagement();toast(`${barber.name} is now ${barber.active?"active":"inactive"}.`)
+    }catch(error){toast(error?.message||"Barber status could not be changed.")}
+    return
   }
-});
 
-
-document.addEventListener("click",event=>{
- const button=event.target.closest("[data-delete-roster]");if(!button)return;
- const items=loadBarberRoster(),barber=items.find(x=>x.id===button.dataset.deleteRoster);if(!barber)return;
- const history=barberLinkedHistory(barber.name);
- if(history.total>0){
-   alert(`${barber.name} cannot be permanently deleted because linked business history exists.\n\nAppointments: ${history.appointments}\nWalk-ins: ${history.walkIns}\nPOS: ${history.pos}\nReviews: ${history.reviews}\nBooth rent: ${history.boothRent}\nOwner Diary: ${history.diary}\nMessages: ${history.messages}\n\nUse Deactivate instead.`);
-   return
- }
- if(!confirm(`Permanently delete ${barber.name}? This is intended only for mistaken or premature additions with no business history.`))return;
- saveBarberRoster(items.filter(x=>x.id!==barber.id));
- if(typeof audit==="function")audit("Barber permanently deleted",barber.name);
- renderBarberManagement();toast(`${barber.name} was deleted.`)
+  const deleteButton=event.target.closest("[data-delete-roster]");
+  if(deleteButton){
+    const items=loadBarberRoster(),barber=items.find(x=>x.id===deleteButton.dataset.deleteRoster);if(!barber)return;
+    const history=barberLinkedHistory(barber.name);
+    if(history.total>0){alert(`${barber.name} cannot be permanently deleted because linked business history exists.\n\nAppointments: ${history.appointments}\nWalk-ins: ${history.walkIns}\nPOS: ${history.pos}\nReviews: ${history.reviews}\nBooth rent: ${history.boothRent}\nOwner Diary: ${history.diary}\nMessages: ${history.messages}\n\nUse Deactivate instead.`);return}
+    if(!confirm(`Permanently delete ${barber.name}? This is intended only for mistaken or pending additions with no business history.`))return;
+    try{
+      await ICUCloud.ownerManageBarber("delete_pending",{barber_id:barber.cloudBarberId||undefined,display_name:barber.name});
+      saveBarberRoster(items.filter(x=>x.id!==barber.id));audit("Barber permanently deleted",barber.name);renderBarberManagement();toast(`${barber.name} was deleted.`)
+    }catch(error){toast(error?.message||"This barber cannot be permanently deleted. Use Deactivate instead.")}
+  }
 });
 
 document.addEventListener("input",event=>{
@@ -1722,4 +1733,16 @@ document.addEventListener("click",event=>{
  const clientele=event.target.closest("[data-clientele-key]");if(clientele){window.__icuSelectedClienteleKey=clientele.dataset.clienteleKey;renderSelectedClientele();return}
 });
 
-window.ICU_BSMS_VERSION="0.23-test-hub-services-auth-policy-validated";
+document.addEventListener("click",async event=>{
+ const b=event.target.closest("[data-recovery-action]");if(!b)return;
+ const action=b.dataset.recoveryAction,barberId=b.dataset.recoveryBarber,label=action==="force_password_change"?"require a password change":action;
+ if(!confirm(`Confirm: ${label} for this account?`))return;
+ b.disabled=true;
+ try{await ICUCloud.ownerRecoveryAction(barberId,action);await renderAccountSecurity();toast("Account recovery setting updated.")}
+ catch(error){toast(error?.message||"Account recovery action failed.");b.disabled=false}
+});
+
+window.addEventListener("icuCloudChanged",()=>{try{const v=currentViewName();if(v)renderCurrentView(v);updateUnifiedNotifications()}catch(_){}});
+window.addEventListener("icuCloudError",event=>{const message=event.detail?.message||"Supabase synchronization error.";try{toast(message)}catch(_){}});
+
+window.ICU_BSMS_VERSION="0.25-supabase-runtime";

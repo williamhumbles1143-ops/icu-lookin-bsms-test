@@ -1,0 +1,19 @@
+ICU Lookin BSMS v0.25 — Static Validation Report
+
+PASS: JavaScript syntax — assets/app.js
+PASS: JavaScript syntax — assets/supabase-auth.js
+PASS: JavaScript syntax — assets/supabase-config.js
+PASS: JavaScript syntax — assets/supabase-data.js
+PASS: Local HTML asset/link reference audit
+PASS: Publishable Supabase key only in browser configuration
+PASS: No Supabase service-role/secret key embedded in frontend
+PASS: Client frontend references Supabase public-booking service
+PASS: Existing Owner/Barber/Client launchers retained
+
+Backend already active in Supabase:
+- Supabase Auth staff identities/roles
+- public-booking Edge Function
+- owner-account-admin Edge Function
+- Runtime/backend foundation migration
+
+This is a test build for GitHub Pages. End-to-end browser/device testing is still required before production use.

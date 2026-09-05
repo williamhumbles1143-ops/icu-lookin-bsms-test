@@ -1,0 +1,12 @@
+ICU Lookin BSMS v0.25 — Supabase Full Test Build
+
+- Client booking posts new appointments to the Supabase public-booking Edge Function.
+- Public booking state loads active barbers, services/pricing, availability, time off, and booked times from Supabase.
+- Returning-client lookup and customer profile data use Supabase.
+- Staff authentication remains Supabase Auth with role-based Owner/Barber access.
+- Staff runtime data synchronizes with Supabase Postgres and Realtime.
+- Staff messaging, Social Content storage, and Owner Document Center use Supabase-backed services.
+- Account & Security page added for permanent password changes and Owner recovery controls.
+- Selena remains pending until a real Auth email/account is available.
+
+TESTING STATUS: This is a GitHub Pages test build. Live card processing, production SMTP, and camera/NVR integration are not included.

@@ -71,7 +71,7 @@
     <a href="#owner-workforce" data-view-link="owner-workforce">Workforce</a>
     <a href="#owner-booth-rent" data-view-link="owner-booth-rent">Booth Rent</a>
     <a href="#owner-payments" data-view-link="owner-payments">Payments</a>
-    <a href="#owner-messages" data-view-link="owner-messages">Messages <span id="ownerMessageNavBadge" class="nav-badge hidden">0</span></a>
+    <a href="#owner-messages" data-view-link="owner-messages">Messages <span id="ownerMessageNavBadge" class="nav-badge hidden">0</span></a><a href="#account-security" data-view-link="account-security">Account &amp; Security</a>
   <a href="#owner-control-center" data-view-link="owner-control-center">Control Center</a><a href="#owner-barber-management" data-view-link="owner-barber-management">Barber Management</a><a href="#owner-diary" data-view-link="owner-diary">Owner Diary</a><a href="#owner-incidents" data-view-link="owner-incidents">Incident Reports</a><a href="#owner-inspections" data-view-link="owner-inspections">Inspections</a><a href="#owner-inspection-issues" data-view-link="owner-inspection-issues">Inspection Issues</a><a href="#owner-checklists" data-view-link="owner-checklists">Checklists</a><a href="#owner-documents" data-view-link="owner-documents">Document Center</a><a href="#owner-cameras" data-view-link="owner-cameras">Shop Cameras</a><a href="#owner-growth" data-view-link="owner-growth">Growth & Marketing</a><a href="#owner-reports" data-view-link="owner-reports">Business Reports</a><a href="#owner-audit" data-view-link="owner-audit">Audit History</a><a href="#owner-backup" data-view-link="owner-backup">Backup / Export</a><a href="#owner-health" data-view-link="owner-health">System Health</a><a href="#owner-guide" data-view-link="owner-guide">Owner Guide</a><a class="owner-exit-link" href="OWNER_LAUNCHER.html">Exit / Return to Owner Launcher</a><button id="ownerMoreButton" class="owner-more-button" type="button" aria-expanded="false">More ▾</button></nav>
 
   <nav id="barberNav" class="management-only individual-only">
@@ -93,7 +93,7 @@
     <a href="#barber-marketing" data-view-link="barber-marketing">Marketing</a>
     <a href="#barber-reviews" data-view-link="barber-reviews">Reviews</a>
     <a href="#barber-client-messages" data-view-link="barber-client-messages">Client Messages</a>
-    <a href="#barber-messages" data-view-link="barber-messages">Messages <span id="barberMessageNavBadge" class="nav-badge hidden">0</span></a>
+    <a href="#barber-messages" data-view-link="barber-messages">Messages <span id="barberMessageNavBadge" class="nav-badge hidden">0</span></a><a href="#account-security" data-view-link="account-security">Account &amp; Security</a>
   <button id="barberSignOutButton" class="barber-signout-button" type="button">Sign Out</button>
   <a class="barber-exit-link" href="BARBER_LAUNCHER.html">Exit / Return to Barber Launcher</a>
   <button id="barberMoreButton" class="barber-more-button" type="button" aria-expanded="false">More ▾</button>
@@ -784,6 +784,30 @@
 
 <section id="view-owner-reports" class="view hidden"><div class="page-heading"><div><p class="eyebrow">Management analytics</p><h1>Business Reports</h1></div></div><div id="businessReportCards" class="stat-grid dashboard-grid"></div><section class="panel"><h2>Report Highlights</h2><div id="businessReportHighlights" class="queue-list"></div></section></section>
 
+
+  <section id="view-account-security" class="view hidden">
+    <div class="page-heading"><div><p class="eyebrow">Supabase account security</p><h1>Account &amp; Security</h1><p>Manage the password for the currently signed-in ICU Lookin staff account.</p></div></div>
+    <div class="dashboard-layout">
+      <section class="panel">
+        <h2>Signed-in account</h2>
+        <div id="securityIdentity" class="notice">Loading account…</div>
+        <p class="help">Passwords are managed by Supabase Auth. ICU Lookin does not display or store your readable password.</p>
+      </section>
+      <section class="panel">
+        <h2>Change my password</h2>
+        <label>Current password<input id="securityCurrentPassword" type="password" autocomplete="current-password"></label>
+        <label>New password<input id="securityNewPassword" type="password" autocomplete="new-password" minlength="8"></label>
+        <label>Confirm new password<input id="securityConfirmPassword" type="password" autocomplete="new-password" minlength="8"></label>
+        <button id="securityChangePassword" class="button primary" type="button">Change Password</button>
+        <p id="securityPasswordStatus" class="help"></p>
+      </section>
+    </div>
+    <section id="ownerRecoveryPanel" class="panel hidden">
+      <h2>Owner account recovery</h2>
+      <p>Barber account lock, unlock, and password-recovery controls will be managed here. Existing passwords are never shown to the Owner.</p>
+      <div id="ownerRecoveryList"></div>
+    </section>
+  </section>
 </main>
 
 <footer>ICU Lookin Barber Studio • Local prototype data is stored in this browser.</footer>
