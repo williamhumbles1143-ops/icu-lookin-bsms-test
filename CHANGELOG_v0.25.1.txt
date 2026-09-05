@@ -1,0 +1,5 @@
+ICU Lookin BSMS v0.25.1 — Supabase Booking Hotfix
+
+- Loads assets/supabase-data.js inside BSMS_APP.html so the customer booking page can reach the live Supabase public-booking Edge Function.
+- Booking confirmation now fails closed if the cloud booking service is unavailable; it will no longer display a false local-only success.
+- Customer bootstrap now removes stale local appointment records that are not present in Supabase, keeping Supabase as the booking source of truth.

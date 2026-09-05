@@ -400,7 +400,8 @@ async function confirmBooking(){
  }else{finalized.depositPaid=0;finalized.balanceDue=finalized.customerTotal}
  const button=$("#confirmButton"),oldText=button.textContent;button.disabled=true;button.textContent="Saving appointment…";
  try{
-   if(window.ICUCloud)await ICUCloud.createBooking(finalized);
+   if(!window.ICUCloud)throw new Error("Cloud booking is unavailable. Refresh the page and try again.");
+   await ICUCloud.createBooking(finalized);
  }catch(error){
    toast(error?.message||"Unable to save the appointment.");
    button.disabled=false;button.textContent=oldText;$("#reviewPanel").classList.add("hidden");await window.ICUCloud?.publicState?.();refreshTimes();return

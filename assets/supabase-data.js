@@ -224,7 +224,8 @@ async function publicState(){
   }
   // Preserve any full customer records already fetched by phone while adding safe blocked slots.
   const prior=safeParse(localStorage.getItem("icuLookinAppointmentsV3"),[]);
-  const full=prior.filter(a=>a&&((a.phone&&String(a.phone).trim())||a.email));
+  const cloudIds=new Set(blocked.map(a=>a.id));
+  const full=prior.filter(a=>a&&cloudIds.has(a.id)&&((a.phone&&String(a.phone).trim())||a.email));
   const ids=new Set(full.map(a=>a.id)); const merged=[...full,...blocked.filter(a=>!ids.has(a.id))];
   rawSet("icuLookinAppointmentsV3",merged);rawSet("icuLookinPricingV1",pricing);rawSet("icuBarberServicePrefsV1",prefs);rawSet("icuCustomServicesV1",custom);rawSet("icuAvailabilityV1",availability);rawSet("icuTimeOffV1",timeoff);rawSet("icuDepositSettingsV1",deposit);
   window.ICU_PUBLIC_SERVICES=j.services||[];
