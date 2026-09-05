@@ -1304,7 +1304,7 @@ function drawFaviconBadge(count){
  const img=new Image();img.onload=()=>{const canvas=document.createElement("canvas");canvas.width=128;canvas.height=128;const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0,128,128);if(count>0){ctx.fillStyle="#d71920";ctx.beginPath();ctx.arc(99,29,28,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#fff";ctx.lineWidth=6;ctx.stroke();ctx.fillStyle="#fff";ctx.font=`bold ${count>9?25:34}px Arial`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(count>99?"99+":String(count),99,31)}let link=document.querySelector('link[rel="icon"]');if(!link){link=document.createElement("link");link.rel="icon";document.head.appendChild(link)}link.type="image/png";link.href=canvas.toDataURL("image/png")};img.src=baseFaviconPath()
 }
 function categoryLastSeen(barber,category){return Number(localStorage.getItem(`icuLastSeen:${category}:${barber}`)||0)}
-function markCategorySeen(barber,category){localStorage.setItem(`icuLastSeen:${category}:${barber}`,String(Date.now()))}
+function markCategorySeen(barber,category){const ts=Date.now();localStorage.setItem(`icuLastSeen:${category}:${barber}`,String(ts));window.ICUCloud?.markNotificationSeen(category).catch(error=>console.error("Notification read sync failed",error))}
 function newAppointmentCount(barber){const last=categoryLastSeen(barber,"appointments");return loadAppointments().filter(a=>a.barber===barber&&new Date(a.createdAt||a.startAt).getTime()>last).length}
 function newWalkInCount(barber){const last=categoryLastSeen(barber,"walkins");return loadQueue(WALKIN_KEY).filter(w=>w.barber===barber&&new Date(w.assignedAt||w.createdAt).getTime()>last).length}
 function ownerOperationsUnread(){const last=Number(localStorage.getItem("icuLastSeen:operations:Owner")||0);return loadQueue(WALKIN_KEY).filter(w=>new Date(w.createdAt).getTime()>last).length}
@@ -1455,7 +1455,7 @@ function renderCurrentView(name){
  if(name==="owner-locations")renderLocations();
  if(name==="owner-assistant"){}
  if(name==="owner-customers")renderOwnerCustomers();
- if(name==="owner-operations")renderOperations();
+ if(name==="owner-operations"){renderOperations();localStorage.setItem("icuLastSeen:operations:Owner",String(Date.now()));window.ICUCloud?.markNotificationSeen("operations").catch(error=>console.error("Notification read sync failed",error));updateUnifiedNotifications();}
  if(name==="owner-workforce")renderWorkforce();
  if(name==="owner-booth-rent")renderOwnerBoothRent();
  if(name==="owner-payments")renderPayments();
@@ -1465,7 +1465,7 @@ function renderCurrentView(name){
  if(name==="customer-loyalty")renderLoyalty();
  if(name==="customer-gifts"){}
  if(name==="barber-dashboard")renderBarberDashboard();
- if(name==="barber-walkins")renderBarberWalkIns();
+ if(name==="barber-walkins"){renderBarberWalkIns();if(activeBarber()){markCategorySeen(activeBarber(),"walkins");updateUnifiedNotifications();}}
  if(name==="barber-appointments"){renderIndividualAppointments();if(activeBarber()){markCategorySeen(activeBarber(),"appointments");updateUnifiedNotifications();}}
  if(name==="barber-calendar")renderBarberCalendar();
  if(name==="barber-clientele")renderClientele();

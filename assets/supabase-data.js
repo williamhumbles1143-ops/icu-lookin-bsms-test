@@ -169,6 +169,28 @@ async function hydrateMessages(){
   const readMap={}; for(const r of reads||[]){readMap[r.persona]=readMap[r.persona]||{};readMap[r.persona][r.conversation_id]=new Date(r.last_read_at).getTime()}
   rawSet("icuLookinMessagesV1",legacy);rawSet("icuLookinMessageGroupsV1",groups);rawSet("icuLookinMessageReadsV1",readMap);
 }
+async function hydrateNotificationReads(){
+  if(!identity)return;
+  const {data,error}=await client.from("notification_read_state").select("category,last_seen_at");
+  if(error)throw error;
+  for(const row of data||[]){
+    const persona=row.category==="operations"?"Owner":currentName();
+    if(!persona)continue;
+    const ms=new Date(row.last_seen_at).getTime();
+    if(Number.isFinite(ms))localStorage.setItem(`icuLastSeen:${row.category}:${persona}`,String(ms));
+  }
+}
+async function markNotificationSeen(category){
+  if(!["appointments","walkins","operations"].includes(category))throw new Error("Unsupported notification category.");
+  const {data:{user},error:ue}=await client.auth.getUser();if(ue)throw ue;if(!user)throw new Error("Staff sign-in required.");
+  const last_seen_at=new Date().toISOString();
+  const {error}=await client.from("notification_read_state").upsert({user_id:user.id,category,last_seen_at},{onConflict:"user_id,category"});
+  if(error)throw error;
+  const persona=category==="operations"?"Owner":currentName();
+  if(persona)localStorage.setItem(`icuLastSeen:${category}:${persona}`,String(new Date(last_seen_at).getTime()));
+  return last_seen_at;
+}
+
 
 function nonEmptyLocal(key){
   const raw=localStorage.getItem(key);if(!raw)return false;
@@ -205,6 +227,7 @@ async function hydrateStaff(){
   if(isOwner()){const sr=await client.from("shop_runtime_state").select("*").eq("id",true).maybeSingle();if(sr.error)throw sr.error;shopRow=sr.data}
   mergeRowsToLocal();
   await hydrateMessages();
+  await hydrateNotificationReads();
 }
 async function publicState(){
   const r=await fetch(`${EDGE_URL}?action=state`,{headers:{apikey:cfg.publishableKey}});
@@ -281,6 +304,7 @@ function startRealtime(){
     .on("postgres_changes",{event:"*",schema:"public",table:"shop_runtime_state"},()=>{if(isOwner())refreshStaff()})
     .on("postgres_changes",{event:"INSERT",schema:"public",table:"staff_messages"},async()=>{await hydrateMessages();window.dispatchEvent(new Event("icuMessagesChanged"));window.dispatchEvent(new Event("icuCloudChanged"))})
     .on("postgres_changes",{event:"*",schema:"public",table:"staff_message_reads"},async()=>{await hydrateMessages();window.dispatchEvent(new Event("icuMessagesChanged"))})
+    .on("postgres_changes",{event:"*",schema:"public",table:"notification_read_state"},async()=>{await hydrateNotificationReads();window.dispatchEvent(new Event("icuCloudChanged"))})
     .subscribe();
 }
 async function createBooking(booking){
@@ -374,5 +398,5 @@ async function ownerAdminAction(action,payload={}){
 }
 async function ownerRecoveryAction(barberId,action){await ownerAdminAction(action,{barber_id:barberId});return true}
 async function ownerManageBarber(action,payload={}){return ownerAdminAction(action,payload)}
-window.ICUCloud={client,bootstrap,hydrateStaff,publicState,saveLegacyKey,createBooking,customerLookup,saveCustomerProfile,submitCustomerReview,sendCustomerAppointmentMessage,createGiftCardCloud,lookupGiftCardCloud,sendMessage,markRead,createGroup,socialItems,saveSocialFiles,updateSocial,deleteSocial,saveEditedSocial,uploadOwnerDocuments,downloadOwnerDocument,deleteOwnerDocument,currentIdentity,refreshStaff,ownerRecoveryAction,ownerManageBarber};
+window.ICUCloud={client,bootstrap,hydrateStaff,publicState,saveLegacyKey,createBooking,customerLookup,saveCustomerProfile,submitCustomerReview,sendCustomerAppointmentMessage,createGiftCardCloud,lookupGiftCardCloud,sendMessage,markRead,createGroup,socialItems,saveSocialFiles,updateSocial,deleteSocial,saveEditedSocial,uploadOwnerDocuments,downloadOwnerDocument,deleteOwnerDocument,currentIdentity,refreshStaff,markNotificationSeen,ownerRecoveryAction,ownerManageBarber};
 })();
